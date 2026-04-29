@@ -2271,11 +2271,23 @@ function importFromText() {
 
 function mergeImport(data) {
   if (!data || typeof data !== 'object') { toast('Estrutura inválida', 'danger'); return; }
+  let added = 0, updated = 0;
   ['inadimplencia','caixa','aprovacoes','historico'].forEach(k => {
-    if (Array.isArray(data[k])) state[k] = data[k];
+    if (!Array.isArray(data[k])) return;
+    if (!state[k]) state[k] = [];
+    data[k].forEach(item => {
+      const idx = state[k].findIndex(x => x.id === item.id);
+      if (idx >= 0) {
+        state[k][idx] = item;
+        updated++;
+      } else {
+        state[k].push(item);
+        added++;
+      }
+    });
   });
   save();
-  toast('Dados importados com sucesso');
+  toast(`Importado: ${added} novos, ${updated} atualizados`);
   renderAll();
 }
 
