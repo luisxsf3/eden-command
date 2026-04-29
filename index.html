@@ -908,7 +908,7 @@
       <span>Inadimplência</span>
       <span class="nav-badge" id="badge-inad">0</span>
     </div>
-    <div class="nav-item" data-view="caixa" style="display:none">
+    <div class="nav-item" data-view="caixa">
       <span class="nav-icon">≋</span>
       <span>Fluxo de Caixa</span>
     </div>
@@ -1675,7 +1675,7 @@ function renderInadimplencia() {
 
   const tbody = document.getElementById('inad-tbody');
   const emptyMsg = {
-    aberto: 'Nenhum boleto em aberto.',
+    aberto: 'Nenhum boleto em aberto ou a vencer.',
     pago: 'Nenhum boleto pago.',
     excluido: 'Nenhum boleto excluído.',
     todos: 'Nenhum boleto cadastrado.'
@@ -1690,7 +1690,7 @@ function renderInadimplencia() {
     let statusBadge, statusText;
     if (b.status === 'pago') { statusBadge = 'badge-success'; statusText = 'pago'; }
     else if (b.status === 'excluido') { statusBadge = 'badge-neutral'; statusText = 'excluído'; }
-    else { statusBadge = b.dias > 30 ? 'badge-danger' : b.dias > 0 ? 'badge-warning' : 'badge-info'; statusText = b.dias > 0 ? `${b.dias}d atraso` : 'em dia'; }
+    else { statusBadge = b.dias > 30 ? 'badge-danger' : b.dias > 0 ? 'badge-warning' : 'badge-info'; statusText = b.dias > 0 ? `${b.dias}d atraso` : 'a vencer'; }
 
     // Ações mudam por status
     let actions = '';
