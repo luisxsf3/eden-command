@@ -1000,6 +1000,12 @@
         <select class="filter-input" id="inad-unit-filter" onchange="renderInadimplencia()">
           <option value="">Todas as unidades</option>
         </select>
+        <select class="filter-input" id="inad-status-filter" onchange="renderInadimplencia()">
+          <option value="aberto">Em aberto</option>
+          <option value="pago">Pagos</option>
+          <option value="excluido">Excluídos</option>
+          <option value="todos">Todos</option>
+        </select>
       </div>
       <table>
         <thead>
@@ -1426,17 +1432,14 @@ async function syncNow() {
     return;
   }
   setSyncStatus('syncing');
-  // primeiro envia o local pra cloud, depois recarrega
-  const saved = await saveToCloud();
-  if (saved) {
-    const loaded = await loadFromCloud();
-    if (loaded) {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
-      setSyncStatus('online');
-      toast('Sincronizado', 'success');
-      renderAll();
-      return;
-    }
+  // Primeiro PUXA da planilha pra não sobrescrever linhas novas
+  const loaded = await loadFromCloud();
+  if (loaded) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+    setSyncStatus('online');
+    toast('Sincronizado', 'success');
+    renderAll();
+    return;
   }
   setSyncStatus('offline');
   toast('Falha na sincronização', 'danger');
@@ -1613,6 +1616,7 @@ function renderOverview() {
 function renderInadimplencia() {
   const search = (document.getElementById('inad-search')?.value || '').toLowerCase();
   const unitFilter = document.getElementById('inad-unit-filter')?.value || '';
+  const statusFilter = document.getElementById('inad-status-filter')?.value || 'aberto';
 
   const filter = document.getElementById('inad-unit-filter');
   if (filter && filter.options.length === 1) {
@@ -1623,23 +1627,34 @@ function renderInadimplencia() {
     });
   }
 
-  const items = state.inadimplencia
-    .filter(b => b.status !== 'pago')
+  // Filtro por status
+  let filtered = state.inadimplencia;
+  if (statusFilter === 'aberto') filtered = filtered.filter(b => b.status !== 'pago' && b.status !== 'excluido');
+  else if (statusFilter === 'pago') filtered = filtered.filter(b => b.status === 'pago');
+  else if (statusFilter === 'excluido') filtered = filtered.filter(b => b.status === 'excluido');
+  // 'todos' = sem filtro de status
+
+  const items = filtered
     .filter(b => !search || b.cliente.toLowerCase().includes(search))
     .filter(b => !unitFilter || b.unidade === unitFilter)
     .map(b => ({...b, dias: Math.max(0, daysBetween(b.vencimento, today()))}))
     .sort((a,b) => b.dias - a.dias);
 
-  // KPIs inad
-  const totalOriginal = items.reduce((s,b) => s+b.valor, 0);
-  const totalAtualizado = items.reduce((s,b) => s + calcMora(b.valor, b.dias).atualizado, 0);
+  // KPIs inad — sempre calcula sobre os em aberto
+  const abertos = state.inadimplencia.filter(b => b.status !== 'pago' && b.status !== 'excluido');
+  const totalOriginal = abertos.reduce((s,b) => s+b.valor, 0);
+  const totalAtualizado = abertos.reduce((s,b) => {
+    const d = Math.max(0, daysBetween(b.vencimento, today()));
+    return s + calcMora(b.valor, d).atualizado;
+  }, 0);
   const totalMora = totalAtualizado - totalOriginal;
+  const totalPagos = state.inadimplencia.filter(b => b.status === 'pago').reduce((s,b) => s+b.valor, 0);
 
   document.getElementById('inad-kpi').innerHTML = `
     <div class="kpi kpi-danger">
       <div class="kpi-label">Total atualizado</div>
       <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalAtualizado)}</div>
-      <div class="kpi-meta">${items.length} boletos com mora aplicada</div>
+      <div class="kpi-meta">${abertos.length} boletos em aberto</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Valor original</div>
@@ -1651,22 +1666,43 @@ function renderInadimplencia() {
       <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalMora)}</div>
       <div class="kpi-meta">acréscimo total</div>
     </div>
-    <div class="kpi kpi-info">
-      <div class="kpi-label">Atraso médio</div>
-      <div class="kpi-value">${items.length ? Math.round(items.reduce((s,b)=>s+b.dias,0)/items.length) : 0}<span class="currency" style="margin-left:6px">dias</span></div>
-      <div class="kpi-meta">média ponderada</div>
+    <div class="kpi kpi-success">
+      <div class="kpi-label">Total recebido</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalPagos)}</div>
+      <div class="kpi-meta">${state.inadimplencia.filter(b => b.status === 'pago').length} boletos pagos</div>
     </div>
   `;
 
   const tbody = document.getElementById('inad-tbody');
+  const emptyMsg = {
+    aberto: 'Nenhum boleto em aberto.',
+    pago: 'Nenhum boleto pago.',
+    excluido: 'Nenhum boleto excluído.',
+    todos: 'Nenhum boleto cadastrado.'
+  };
   if (items.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">Nenhum boleto em aberto.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">${emptyMsg[statusFilter] || emptyMsg.aberto}</td></tr>`;
     return;
   }
   tbody.innerHTML = items.map(b => {
     const mora = calcMora(b.valor, b.dias);
-    const statusBadge = b.dias > 30 ? 'badge-danger' : b.dias > 0 ? 'badge-warning' : 'badge-info';
-    const statusText = b.dias > 0 ? `${b.dias}d atraso` : 'em dia';
+    const isOpen = b.status !== 'pago' && b.status !== 'excluido';
+    let statusBadge, statusText;
+    if (b.status === 'pago') { statusBadge = 'badge-success'; statusText = 'pago'; }
+    else if (b.status === 'excluido') { statusBadge = 'badge-neutral'; statusText = 'excluído'; }
+    else { statusBadge = b.dias > 30 ? 'badge-danger' : b.dias > 0 ? 'badge-warning' : 'badge-info'; statusText = b.dias > 0 ? `${b.dias}d atraso` : 'em dia'; }
+
+    // Ações mudam por status
+    let actions = '';
+    if (isOpen) {
+      actions = `
+        <button class="icon-btn success" title="Marcar pago" onclick="markPaid('${b.id}')">✓</button>
+        <button class="icon-btn" title="Editar" onclick="editItem('inadimplencia','${b.id}')">✎</button>
+        <button class="icon-btn danger" title="Excluir" onclick="softDeleteInad('${b.id}')">✕</button>`;
+    } else if (b.status === 'pago' || b.status === 'excluido') {
+      actions = `<button class="icon-btn" title="Reabrir" onclick="reopenInad('${b.id}')">↩</button>`;
+    }
+
     return `<tr>
       <td class="cell-bold">${b.cliente}</td>
       <td><span class="unit-tag">${b.unidade}</span></td>
@@ -1676,11 +1712,7 @@ function renderInadimplencia() {
       <td class="num cell-bold">${fmtBR(mora.atualizado)}</td>
       <td><span class="badge ${statusBadge}">${statusText}</span></td>
       <td>
-        <div class="row-actions">
-          <button class="icon-btn success" title="Marcar pago" onclick="markPaid('${b.id}')">✓</button>
-          <button class="icon-btn" title="Editar" onclick="editItem('inadimplencia','${b.id}')">✎</button>
-          <button class="icon-btn danger" title="Remover" onclick="removeItem('inadimplencia','${b.id}')">✕</button>
-        </div>
+        <div class="row-actions">${actions}</div>
       </td>
     </tr>`;
   }).join('');
@@ -1802,6 +1834,26 @@ function markPaid(id) {
     b.status = 'pago';
     save();
     toast(`Boleto de ${b.cliente} marcado como pago`);
+    renderAll();
+  }
+}
+
+function softDeleteInad(id) {
+  const b = state.inadimplencia.find(x => x.id === id);
+  if (b) {
+    b.status = 'excluido';
+    save();
+    toast(`Boleto de ${b.cliente} movido para excluídos`);
+    renderAll();
+  }
+}
+
+function reopenInad(id) {
+  const b = state.inadimplencia.find(x => x.id === id);
+  if (b) {
+    b.status = 'vencido';
+    save();
+    toast(`Boleto de ${b.cliente} reaberto`);
     renderAll();
   }
 }
