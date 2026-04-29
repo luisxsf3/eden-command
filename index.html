@@ -961,6 +961,34 @@
   <section class="view active" id="view-overview">
     <div class="kpi-grid" id="kpi-grid"></div>
 
+    <div style="display:grid;grid-template-columns:1.2fr 0.8fr;gap:16px;margin-bottom:20px;">
+      <div class="section" style="margin-bottom:0">
+        <div class="section-header">
+          <h3 class="section-title">Inadimplência por unidade</h3>
+        </div>
+        <div style="padding:16px 20px;height:220px;position:relative;">
+          <canvas id="chart-unit-bar"></canvas>
+        </div>
+      </div>
+      <div class="section" style="margin-bottom:0">
+        <div class="section-header">
+          <h3 class="section-title">Distribuição</h3>
+        </div>
+        <div style="padding:16px 20px;height:220px;position:relative;">
+          <canvas id="chart-unit-pie"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-bottom:20px;">
+      <div class="section-header">
+        <h3 class="section-title">Top 5 clientes<span class="section-title-meta">por valor em aberto</span></h3>
+      </div>
+      <div style="padding:16px 20px;height:220px;position:relative;">
+        <canvas id="chart-top-clients"></canvas>
+      </div>
+    </div>
+
     <div class="section">
       <div class="section-header">
         <h3 class="section-title">Próximos vencimentos<span class="section-title-meta">próximos 7 dias</span></h3>
@@ -1211,6 +1239,7 @@
 
 <div class="toast-container" id="toast-container"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ============= STATE =============
 const STORAGE_KEY = 'eden_command_v1';
@@ -1534,15 +1563,13 @@ function setView(view) {
 
 // ============= RENDER OVERVIEW =============
 function renderOverview() {
-  const inad = state.inadimplencia.filter(b => b.status !== 'pago');
-  const totalInad = inad.reduce((s, b) => {
-    const dias = daysBetween(b.vencimento, today());
+  const abertos = state.inadimplencia.filter(b => b.status !== 'pago' && b.status !== 'excluido');
+  const pagos = state.inadimplencia.filter(b => b.status === 'pago');
+  const totalInad = abertos.reduce((s, b) => {
+    const dias = Math.max(0, daysBetween(b.vencimento, today()));
     return s + calcMora(b.valor, dias).atualizado;
   }, 0);
-
-  const entradas30 = state.caixa.filter(c => c.tipo === 'entrada' && c.status === 'previsto').reduce((s,c) => s+c.valor, 0);
-  const saidas30 = state.caixa.filter(c => c.tipo === 'saida' && c.status === 'previsto').reduce((s,c) => s+c.valor, 0);
-  const saldoProj = entradas30 - saidas30;
+  const totalRecebido = pagos.reduce((s, b) => s + b.valor, 0);
 
   const aprovPendentes = state.aprovacoes.filter(a => a.status === 'pendente');
   const valorAprov = aprovPendentes.reduce((s,a) => s+a.valor, 0);
@@ -1552,22 +1579,12 @@ function renderOverview() {
     <div class="kpi kpi-danger">
       <div class="kpi-label">Inadimplência total</div>
       <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalInad)}</div>
-      <div class="kpi-meta">${inad.length} boletos em aberto</div>
+      <div class="kpi-meta">${abertos.length} boletos em aberto</div>
     </div>
     <div class="kpi kpi-success">
-      <div class="kpi-label">Entradas previstas</div>
-      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(entradas30)}</div>
-      <div class="kpi-meta">próximos 30 dias</div>
-    </div>
-    <div class="kpi kpi-warning">
-      <div class="kpi-label">Saídas previstas</div>
-      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(saidas30)}</div>
-      <div class="kpi-meta">próximos 30 dias</div>
-    </div>
-    <div class="kpi ${saldoProj >= 0 ? 'kpi-success' : 'kpi-danger'}">
-      <div class="kpi-label">Saldo projetado</div>
-      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(saldoProj)}</div>
-      <div class="kpi-meta">${saldoProj >= 0 ? 'fluxo positivo' : 'atenção: fluxo negativo'}</div>
+      <div class="kpi-label">Recebido</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalRecebido)}</div>
+      <div class="kpi-meta">${pagos.length} boletos liquidados</div>
     </div>
     <div class="kpi kpi-info">
       <div class="kpi-label">Aprovações pendentes</div>
@@ -1576,8 +1593,142 @@ function renderOverview() {
     </div>
   `;
 
-  // upcoming
-  const upcoming = [...inad]
+  // ---- GRÁFICOS ----
+  // Agrupar por unidade
+  const porUnidade = {};
+  abertos.forEach(b => {
+    if (!porUnidade[b.unidade]) porUnidade[b.unidade] = 0;
+    const dias = Math.max(0, daysBetween(b.vencimento, today()));
+    porUnidade[b.unidade] += calcMora(b.valor, dias).atualizado;
+  });
+  const unidadeLabels = Object.keys(porUnidade);
+  const unidadeValues = Object.values(porUnidade).map(v => Math.round(v * 100) / 100);
+  const chartColors = ['#4A7C2E', '#5894C4', '#D4A04A', '#C45846', '#7F77DD'];
+
+  // Destruir charts anteriores se existirem
+  ['chart-unit-bar', 'chart-unit-pie', 'chart-top-clients'].forEach(id => {
+    const existing = Chart.getChart(id);
+    if (existing) existing.destroy();
+  });
+
+  // Bar chart por unidade
+  if (document.getElementById('chart-unit-bar')) {
+    new Chart(document.getElementById('chart-unit-bar'), {
+      type: 'bar',
+      data: {
+        labels: unidadeLabels,
+        datasets: [{
+          data: unidadeValues,
+          backgroundColor: chartColors.slice(0, unidadeLabels.length),
+          borderRadius: 4,
+          barPercentage: 0.5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            ticks: {
+              callback: v => 'R$ ' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v.toFixed(0)),
+              font: { size: 11 }, color: '#8A968A'
+            },
+            grid: { color: 'rgba(128,128,128,0.08)' }
+          },
+          x: {
+            ticks: { font: { size: 12 }, color: '#B8C2B5' },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  // Donut por unidade
+  if (document.getElementById('chart-unit-pie')) {
+    new Chart(document.getElementById('chart-unit-pie'), {
+      type: 'doughnut',
+      data: {
+        labels: unidadeLabels,
+        datasets: [{
+          data: unidadeValues,
+          backgroundColor: chartColors.slice(0, unidadeLabels.length),
+          borderWidth: 0,
+          cutout: '60%'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+            labels: { color: '#B8C2B5', font: { size: 11 }, padding: 12, usePointStyle: true, pointStyleWidth: 8 }
+          }
+        }
+      }
+    });
+  }
+
+  // Top 5 clientes
+  const porCliente = {};
+  abertos.forEach(b => {
+    if (!porCliente[b.cliente]) porCliente[b.cliente] = { valor: 0, count: 0, unidade: b.unidade };
+    const dias = Math.max(0, daysBetween(b.vencimento, today()));
+    porCliente[b.cliente].valor += calcMora(b.valor, dias).atualizado;
+    porCliente[b.cliente].count++;
+  });
+  const top5 = Object.entries(porCliente)
+    .sort((a, b) => b[1].valor - a[1].valor)
+    .slice(0, 5);
+  const top5Labels = top5.map(([name, d]) => {
+    const short = name.length > 30 ? name.substring(0, 28) + '…' : name;
+    return d.count > 1 ? `${short} (${d.count} bol.)` : short;
+  });
+  const top5Values = top5.map(([, d]) => Math.round(d.valor * 100) / 100);
+  const top5Colors = top5.map(([, d]) => {
+    const idx = unidadeLabels.indexOf(d.unidade);
+    return chartColors[idx >= 0 ? idx : 0];
+  });
+
+  if (document.getElementById('chart-top-clients')) {
+    new Chart(document.getElementById('chart-top-clients'), {
+      type: 'bar',
+      data: {
+        labels: top5Labels,
+        datasets: [{
+          data: top5Values,
+          backgroundColor: top5Colors,
+          borderRadius: 4,
+          barPercentage: 0.6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            ticks: {
+              callback: v => 'R$ ' + v.toLocaleString('pt-BR'),
+              font: { size: 10 }, color: '#8A968A'
+            },
+            grid: { color: 'rgba(128,128,128,0.08)' }
+          },
+          y: {
+            ticks: { font: { size: 11 }, color: '#B8C2B5' },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  // ---- PRÓXIMOS VENCIMENTOS ----
+  const upcoming = [...abertos]
     .map(b => ({...b, dias: daysBetween(b.vencimento, today())}))
     .sort((a,b) => a.dias - b.dias)
     .slice(0, 5);
@@ -1602,11 +1753,11 @@ function renderOverview() {
     }).join('');
   }
 
-  // overview approvals
+  // ---- APROVAÇÕES ----
   const aprovDiv = document.getElementById('overview-approvals');
   const top3 = aprovPendentes.slice(0, 3);
   if (top3.length === 0) {
-    aprovDiv.innerHTML = '<div class="empty-state"><h4>Nenhuma aprovação pendente</h4><p>Tudo em dia.</p></div>';
+    aprovDiv.innerHTML = '<div class="empty-state"><h4>Nenhuma aprovação pendente</h4><p>Mesa limpa, capitão.</p></div>';
   } else {
     aprovDiv.innerHTML = top3.map(a => renderApprovalCard(a)).join('');
   }
