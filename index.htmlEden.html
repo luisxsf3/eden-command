@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Éden Command — Executive Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --eden-deep: #0F2A07;
+    --eden-primary: #1B4D0F;
+    --eden-mid: #27500A;
+    --eden-accent: #4A7C2E;
+    --eden-glow: #6FA748;
+    --bg-base: #0A0F08;
+    --bg-elev-1: #0F1610;
+    --bg-elev-2: #131A11;
+    --bg-elev-3: #1A2218;
+    --border-soft: #1E2A1B;
+    --border-strong: #2A3A26;
+    --text-primary: #E8EDE5;
+    --text-secondary: #B8C2B5;
+    --text-muted: #8A968A;
+    --text-faint: #5A6258;
+    --success: #6FA748;
+    --warning: #D4A04A;
+    --danger: #C45846;
+    --info: #5894C4;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.6);
+    --font-display: 'Instrument Serif', Georgia, serif;
+    --font-body: 'Geist', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    height: 100%;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at top left, rgba(27, 77, 15, 0.08), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(74, 124, 46, 0.04), transparent 50%);
+  }
+
+  /* SIDEBAR */
+  aside {
+    background: var(--bg-elev-1);
+    border-right: 1px solid var(--border-soft);
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+
+  .brand {
+    padding: 0 24px 24px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .brand-name {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-style: italic;
+    color: var(--eden-glow);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .brand-sub {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  nav {
+    padding: 16px 12px;
+    flex: 1;
+  }
+
+  .nav-section {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-faint);
+    padding: 16px 12px 8px;
+    font-weight: 600;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+  }
+
+  .nav-item:hover {
+    background: var(--bg-elev-2);
+    color: var(--text-primary);
+  }
+
+  .nav-item.active {
+    background: linear-gradient(90deg, rgba(74,124,46,0.15), rgba(74,124,46,0.04));
+    color: var(--eden-glow);
+    border-color: rgba(74,124,46,0.2);
+  }
+
+  .nav-icon {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+  }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--danger);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .sidebar-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  .footer-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--success);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--success);
+  }
+
+  /* MAIN */
+  main {
+    overflow-x: hidden;
+    min-width: 0;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg-elev-1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+  }
+
+  .topbar-title {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  .topbar-title h1 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  .topbar-date {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .topbar-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-elev-2);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn:hover {
+    background: var(--bg-elev-3);
+    border-color: var(--eden-accent);
+  }
+
+  .btn-primary {
+    background: var(--eden-primary);
+    border-color: var(--eden-mid);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--eden-mid);
+    border-color: var(--eden-accent);
+  }
+
+  .btn-danger {
+    background: transparent;
+    border-color: rgba(196, 88, 70, 0.3);
+    color: var(--danger);
+  }
+
+  .btn-danger:hover {
+    background: rgba(196, 88, 70, 0.1);
+    border-color: var(--danger);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-secondary);
+  }
+
+  .btn-ghost:hover {
+    background: var(--bg-elev-2);
+    color: var(--text-primary);
+  }
+
+  .btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* CONTENT */
+  .view {
+    padding: 28px 32px;
+    display: none;
+    animation: fadeIn 0.25s ease;
+  }
+
+  .view.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* KPIs */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .kpi {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+  }
+
+  .kpi:hover {
+    border-color: var(--border-strong);
+  }
+
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--eden-accent);
+    opacity: 0.7;
+  }
+
+  .kpi.kpi-danger::before { background: var(--danger); }
+  .kpi.kpi-success::before { background: var(--success); }
+  .kpi.kpi-warning::before { background: var(--warning); }
+  .kpi.kpi-info::before { background: var(--info); }
+
+  .kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .kpi-value {
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 400;
+    color: var(--text-primary);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .kpi-value .currency {
+    font-size: 16px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-right: 4px;
+  }
+
+  .kpi-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .kpi-trend {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .kpi-trend.up { color: var(--success); background: rgba(111,167,72,0.1); }
+  .kpi-trend.down { color: var(--danger); background: rgba(196,88,70,0.1); }
+
+  /* SECTIONS */
+  .section {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  .section-title-meta {
+    font-family: var(--font-body);
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: 8px;
+    font-style: normal;
+  }
+
+  /* TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg-elev-2);
+  }
+
+  tbody td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  tbody tr:hover td {
+    background: var(--bg-elev-2);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  td.num, th.num {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cell-bold {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .cell-muted {
+    color: var(--text-muted);
+  }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-family: var(--font-mono);
+  }
+
+  .badge-danger { background: rgba(196,88,70,0.12); color: var(--danger); border: 1px solid rgba(196,88,70,0.2); }
+  .badge-warning { background: rgba(212,160,74,0.12); color: var(--warning); border: 1px solid rgba(212,160,74,0.2); }
+  .badge-success { background: rgba(111,167,72,0.12); color: var(--success); border: 1px solid rgba(111,167,72,0.2); }
+  .badge-info { background: rgba(88,148,196,0.12); color: var(--info); border: 1px solid rgba(88,148,196,0.2); }
+  .badge-neutral { background: var(--bg-elev-3); color: var(--text-muted); border: 1px solid var(--border-strong); }
+
+  /* UNIT TAG */
+  .unit-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--bg-elev-3);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-strong);
+  }
+
+  /* ROW ACTIONS */
+  .row-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+  }
+
+  tr:hover .row-actions {
+    opacity: 1;
+  }
+
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+  }
+
+  .icon-btn:hover {
+    background: var(--bg-elev-3);
+    color: var(--text-primary);
+  }
+
+  .icon-btn.danger:hover {
+    color: var(--danger);
+    background: rgba(196,88,70,0.1);
+  }
+
+  .icon-btn.success:hover {
+    color: var(--success);
+    background: rgba(111,167,72,0.1);
+  }
+
+  /* DETAIL ROW */
+  .detail-row {
+    background: var(--bg-elev-2) !important;
+  }
+
+  .detail-row td {
+    padding: 12px 16px 16px 32px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .detail-item .detail-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    margin-bottom: 2px;
+  }
+
+  .detail-item .detail-value {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.active {
+    display: flex;
+    animation: fadeIn 0.15s ease;
+  }
+
+  .modal {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    width: 90%;
+    max-width: 520px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-header h2 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+  }
+
+  .modal-body {
+    padding: 24px;
+  }
+
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-soft);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  /* FORM */
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    transition: all 0.15s ease;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--eden-accent);
+    background: var(--bg-elev-3);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 200;
+  }
+
+  .toast {
+    background: var(--bg-elev-3);
+    border: 1px solid var(--border-strong);
+    border-left: 3px solid var(--eden-accent);
+    border-radius: 6px;
+    padding: 12px 16px;
+    min-width: 240px;
+    box-shadow: var(--shadow-md);
+    animation: slideIn 0.2s ease;
+    font-size: 13px;
+  }
+
+  .toast.success { border-left-color: var(--success); }
+  .toast.danger { border-left-color: var(--danger); }
+  .toast.warning { border-left-color: var(--warning); }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* FILTERS */
+  .filters {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--bg-elev-2);
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .filter-input {
+    flex: 1;
+    max-width: 280px;
+    padding: 6px 10px;
+    background: var(--bg-base);
+    border: 1px solid var(--border-soft);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+
+  /* CASH FLOW */
+  .cashflow-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .cf-card {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 18px;
+  }
+
+  .cf-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .cf-icon {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .cf-icon.entrada { background: rgba(111,167,72,0.15); color: var(--success); }
+  .cf-icon.saida { background: rgba(196,88,70,0.15); color: var(--danger); }
+  .cf-icon.saldo { background: rgba(74,124,46,0.15); color: var(--eden-glow); }
+
+  .cf-card-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .cf-card-value {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  .cf-card-value.entrada { color: var(--success); }
+  .cf-card-value.saida { color: var(--danger); }
+  .cf-card-value.saldo-pos { color: var(--eden-glow); }
+  .cf-card-value.saldo-neg { color: var(--danger); }
+
+  /* APPROVALS */
+  .approval-card {
+    border-bottom: 1px solid var(--border-soft);
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .approval-card:last-child { border-bottom: none; }
+
+  .approval-icon {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    background: var(--bg-elev-3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .approval-content h4 {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .approval-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    align-items: center;
+  }
+
+  .approval-amount {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .approval-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  /* DATA VIEW */
+  .data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .data-card {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 24px;
+  }
+
+  .data-card h3 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+    margin-bottom: 6px;
+  }
+
+  .data-card p {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  .data-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-top: 1px solid var(--border-soft);
+    font-size: 12px;
+  }
+
+  .data-stat .label { color: var(--text-muted); }
+  .data-stat .value { font-family: var(--font-mono); color: var(--text-secondary); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .empty-state h4 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    font-weight: 400;
+  }
+
+  .empty-state p {
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-base); }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--eden-accent); }
+
+  /* Resp */
+  @media (max-width: 900px) {
+    body { grid-template-columns: 1fr; }
+    aside { display: none; }
+    .form-row { grid-template-columns: 1fr; }
+    .data-grid { grid-template-columns: 1fr; }
+    .cashflow-summary { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="brand">
+    <div class="brand-name">éden</div>
+    <div class="brand-sub">command · executive</div>
+  </div>
+
+  <nav>
+    <div class="nav-section">Operação</div>
+    <div class="nav-item active" data-view="overview">
+      <span class="nav-icon">◐</span>
+      <span>Visão Geral</span>
+    </div>
+    <div class="nav-item" data-view="inadimplencia">
+      <span class="nav-icon">◭</span>
+      <span>Inadimplência</span>
+      <span class="nav-badge" id="badge-inad">0</span>
+    </div>
+    <div class="nav-item" data-view="caixa">
+      <span class="nav-icon">≋</span>
+      <span>Fluxo de Caixa</span>
+    </div>
+    <div class="nav-item" data-view="aprovacoes">
+      <span class="nav-icon">◇</span>
+      <span>Aprovações</span>
+      <span class="nav-badge" id="badge-aprov">0</span>
+    </div>
+
+    <div class="nav-section">Sistema</div>
+    <div class="nav-item" data-view="dados">
+      <span class="nav-icon">⊟</span>
+      <span>Dados</span>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="footer-status">
+      <span class="status-dot" id="sync-dot"></span>
+      <span id="sync-label">Aguardando…</span>
+    </div>
+    <div id="last-saved">—</div>
+  </div>
+</aside>
+
+<main>
+  <div class="topbar">
+    <div class="topbar-title">
+      <h1 id="view-title">Visão Geral</h1>
+      <span class="topbar-date" id="current-date"></span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm" id="sync-btn" onclick="syncNow()" title="Sincronizar agora">
+        <span id="sync-icon">↻</span> <span id="sync-btn-label">Sincronizar</span>
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="exportData()">
+        <span>↓</span> Exportar
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file').click()">
+        <span>↑</span> Importar
+      </button>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importFromFile(event)">
+      <button class="btn btn-primary btn-sm" id="add-button" onclick="openAddModal()">
+        <span>+</span> Novo
+      </button>
+    </div>
+  </div>
+
+  <!-- VIEW: OVERVIEW -->
+  <section class="view active" id="view-overview">
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Próximos vencimentos<span class="section-title-meta">próximos 7 dias</span></h3>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Unidade</th>
+            <th>Vencimento</th>
+            <th class="num">Valor</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="upcoming-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Aprovações pendentes<span class="section-title-meta">decisão necessária</span></h3>
+      </div>
+      <div id="overview-approvals"></div>
+    </div>
+  </section>
+
+  <!-- VIEW: INADIMPLÊNCIA -->
+  <section class="view" id="view-inadimplencia">
+    <div class="kpi-grid" id="inad-kpi"></div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Boletos em aberto<span class="section-title-meta">com mora aplicada</span></h3>
+      </div>
+      <div class="filters">
+        <input type="text" class="filter-input" placeholder="Buscar cliente..." id="inad-search" oninput="renderInadimplencia()">
+        <select class="filter-input" id="inad-unit-filter" onchange="renderInadimplencia()">
+          <option value="">Todas as unidades</option>
+        </select>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Unidade</th>
+            <th>Vencimento</th>
+            <th class="num">Atraso</th>
+            <th class="num">Valor original</th>
+            <th class="num">Valor atualizado</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="inad-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- VIEW: FLUXO DE CAIXA -->
+  <section class="view" id="view-caixa">
+    <div class="cashflow-summary">
+      <div class="cf-card">
+        <div class="cf-card-header">
+          <div class="cf-icon entrada">↗</div>
+          <div class="cf-card-label">Entradas previstas</div>
+        </div>
+        <div class="cf-card-value entrada" id="cf-entradas">R$ 0</div>
+      </div>
+      <div class="cf-card">
+        <div class="cf-card-header">
+          <div class="cf-icon saida">↘</div>
+          <div class="cf-card-label">Saídas previstas</div>
+        </div>
+        <div class="cf-card-value saida" id="cf-saidas">R$ 0</div>
+      </div>
+      <div class="cf-card">
+        <div class="cf-card-header">
+          <div class="cf-icon saldo">≋</div>
+          <div class="cf-card-label">Saldo projetado</div>
+        </div>
+        <div class="cf-card-value" id="cf-saldo">R$ 0</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Movimentações<span class="section-title-meta">próximos 30 dias</span></h3>
+      </div>
+      <div class="filters">
+        <input type="text" class="filter-input" placeholder="Buscar descrição..." id="cf-search" oninput="renderCaixa()">
+        <select class="filter-input" id="cf-tipo-filter" onchange="renderCaixa()">
+          <option value="">Todos os tipos</option>
+          <option value="entrada">Entradas</option>
+          <option value="saida">Saídas</option>
+        </select>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Categoria</th>
+            <th>Unidade</th>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th class="num">Valor</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="caixa-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- VIEW: APROVAÇÕES -->
+  <section class="view" id="view-aprovacoes">
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Pendentes de aprovação<span class="section-title-meta">decisão executiva</span></h3>
+      </div>
+      <div id="aprovacoes-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Histórico recente<span class="section-title-meta">últimas decisões</span></h3>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Solicitante</th>
+            <th>Decisão</th>
+            <th>Data</th>
+            <th class="num">Valor</th>
+          </tr>
+        </thead>
+        <tbody id="historico-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- VIEW: DADOS -->
+  <section class="view" id="view-dados">
+    <div class="data-grid">
+      <div class="data-card" style="grid-column: 1 / -1; border-left: 3px solid var(--eden-accent);">
+        <h3>Conexão com Google Sheets</h3>
+        <p>Conecte a uma planilha do Google para sincronizar dados entre você, o COO e qualquer outro membro do time. Edições feitas aqui aparecem na planilha e vice-versa.</p>
+        <div class="form-group">
+          <label>URL do Web App (termina em /exec)</label>
+          <input type="text" id="sync-url-input" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+        <div class="form-group">
+          <label>Token (opcional, só se configurou no script)</label>
+          <input type="text" id="sync-token-input" placeholder="deixe vazio se não usou TOKEN no script">
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-primary btn-sm" onclick="connectSync()">Conectar</button>
+          <button class="btn btn-ghost btn-sm" onclick="testSync()">Testar conexão</button>
+          <button class="btn btn-danger btn-sm" onclick="disconnectSync()">Desconectar</button>
+        </div>
+        <div class="data-stat">
+          <span class="label">Status</span>
+          <span class="value" id="sync-status-text">desconectado</span>
+        </div>
+        <div class="data-stat">
+          <span class="label">Última sincronização</span>
+          <span class="value" id="sync-last-text">—</span>
+        </div>
+      </div>
+
+      <div class="data-card">
+        <h3>Importar dados</h3>
+        <p>Cole abaixo um JSON com a estrutura esperada ou envie um arquivo. A importação substitui os dados atuais — exporte um backup antes.</p>
+        <textarea id="import-text" placeholder='{"inadimplencia":[...], "caixa":[...], "aprovacoes":[...]}'></textarea>
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+          <button class="btn btn-primary btn-sm" onclick="importFromText()">Importar JSON</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file').click()">Selecionar arquivo</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadSampleData()">Carregar exemplo</button>
+        </div>
+      </div>
+
+      <div class="data-card">
+        <h3>Exportar / Limpar</h3>
+        <p>Faça backup dos dados atuais ou zere o sistema para começar do zero. O backup é um arquivo JSON que pode ser reimportado depois.</p>
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <button class="btn btn-primary btn-sm" onclick="exportData()">Baixar backup</button>
+          <button class="btn btn-danger btn-sm" onclick="clearAllData()">Limpar tudo</button>
+        </div>
+        <div class="data-stat">
+          <span class="label">Boletos em aberto</span>
+          <span class="value" id="stat-inad">0</span>
+        </div>
+        <div class="data-stat">
+          <span class="label">Movimentações</span>
+          <span class="value" id="stat-cf">0</span>
+        </div>
+        <div class="data-stat">
+          <span class="label">Aprovações pendentes</span>
+          <span class="value" id="stat-aprov">0</span>
+        </div>
+      </div>
+
+      <div class="data-card" style="grid-column: 1 / -1;">
+        <h3>Estrutura do JSON</h3>
+        <p>Use este formato como referência para integrar com Claude ou outros sistemas. Datas em ISO (YYYY-MM-DD).</p>
+        <pre style="background: var(--bg-elev-2); border: 1px solid var(--border-soft); border-radius: 6px; padding: 16px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); overflow-x: auto; white-space: pre;"><code>{
+  "inadimplencia": [
+    { "id": "001", "cliente": "Nome", "unidade": "Plenitude",
+      "vencimento": "2026-04-10", "valor": 1500.00, "status": "vencido" }
+  ],
+  "caixa": [
+    { "id": "c01", "descricao": "Mensalidade lote A", "categoria": "Receita",
+      "unidade": "Plenitude", "data": "2026-05-05", "tipo": "entrada",
+      "valor": 12000.00, "status": "previsto" }
+  ],
+  "aprovacoes": [
+    { "id": "a01", "titulo": "Pagamento fornecedor X", "solicitante": "Luis",
+      "categoria": "Compra", "valor": 8500.00, "data": "2026-04-29",
+      "descricao": "Detalhes...", "status": "pendente" }
+  ]
+}</code></pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Novo</h2>
+      <button class="icon-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="saveModal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ============= STATE =============
+const STORAGE_KEY = 'eden_command_v1';
+const SYNC_URL_KEY = 'eden_command_sync_url';
+const SYNC_TOKEN_KEY = 'eden_command_sync_token';
+const UNITS = ['Plenitude', 'Edificação', 'Éden Tech', 'Éden Grupo'];
+
+let state = {
+  inadimplencia: [],
+  caixa: [],
+  aprovacoes: [],
+  historico: []
+};
+
+let currentView = 'overview';
+let editingId = null;
+let editingType = null;
+
+let syncUrl = localStorage.getItem(SYNC_URL_KEY) || '';
+let syncToken = localStorage.getItem(SYNC_TOKEN_KEY) || '';
+let syncStatus = 'idle'; // idle | syncing | online | offline | error
+let syncTimer = null;
+let lastSyncAt = null;
+
+// ============= DATA =============
+const SAMPLE = {
+  inadimplencia: [
+    { id: 'b001', cliente: 'Construtora Vértice Ltda', unidade: 'Edificação', vencimento: '2026-04-10', valor: 18500.00, status: 'vencido' },
+    { id: 'b002', cliente: 'Maria Aparecida Souza', unidade: 'Plenitude', vencimento: '2026-04-15', valor: 1450.00, status: 'vencido' },
+    { id: 'b003', cliente: 'Tech Solutions S.A.', unidade: 'Éden Tech', vencimento: '2026-04-22', valor: 7200.00, status: 'vencido' },
+    { id: 'b004', cliente: 'João Roberto Lima', unidade: 'Plenitude', vencimento: '2026-04-25', valor: 980.00, status: 'vencido' },
+    { id: 'b005', cliente: 'Incorporadora Aurora', unidade: 'Edificação', vencimento: '2026-04-05', valor: 32000.00, status: 'vencido' }
+  ],
+  caixa: [
+    { id: 'c001', descricao: 'Mensalidades Plenitude (lote 1)', categoria: 'Receita recorrente', unidade: 'Plenitude', data: '2026-05-05', tipo: 'entrada', valor: 145000.00, status: 'previsto' },
+    { id: 'c002', descricao: 'Folha de pagamento abril', categoria: 'Pessoal', unidade: 'Éden Grupo', data: '2026-05-05', tipo: 'saida', valor: 89000.00, status: 'previsto' },
+    { id: 'c003', descricao: 'Recebimento Edificação - obra Vértice', categoria: 'Receita projeto', unidade: 'Edificação', data: '2026-05-10', tipo: 'entrada', valor: 67000.00, status: 'previsto' },
+    { id: 'c004', descricao: 'Aluguel sede', categoria: 'Operacional', unidade: 'Éden Grupo', data: '2026-05-10', tipo: 'saida', valor: 18500.00, status: 'previsto' },
+    { id: 'c005', descricao: 'Fornecedores Éden Tech', categoria: 'Operacional', unidade: 'Éden Tech', data: '2026-05-15', tipo: 'saida', valor: 24000.00, status: 'previsto' },
+    { id: 'c006', descricao: 'Mensalidades Plenitude (lote 2)', categoria: 'Receita recorrente', unidade: 'Plenitude', data: '2026-05-20', tipo: 'entrada', valor: 98000.00, status: 'previsto' },
+    { id: 'c007', descricao: 'Impostos federais', categoria: 'Tributos', unidade: 'Éden Grupo', data: '2026-05-25', tipo: 'saida', valor: 42000.00, status: 'previsto' }
+  ],
+  aprovacoes: [
+    { id: 'a001', titulo: 'Compra de equipamentos servidor', solicitante: 'Luis Eduardo', categoria: 'Compra', valor: 28500.00, data: '2026-04-29', descricao: 'Renovação de infraestrutura Éden Tech — 2 servidores Dell PowerEdge.', status: 'pendente' },
+    { id: 'a002', titulo: 'Contratação consultoria jurídica', solicitante: 'Vinicius', categoria: 'Serviço', valor: 15000.00, data: '2026-04-28', descricao: 'Suporte para nova LGPD compliance e revisão contratual.', status: 'pendente' },
+    { id: 'a003', titulo: 'Antecipação Edificação', solicitante: 'Vinicius', categoria: 'Financeiro', valor: 50000.00, data: '2026-04-29', descricao: 'Antecipação de recebíveis junto ao banco — taxa 1.8% am.', status: 'pendente' }
+  ],
+  historico: [
+    { id: 'h001', titulo: 'Pagamento bonificação Q1', solicitante: 'RH', decisao: 'aprovado', data: '2026-04-22', valor: 35000.00 },
+    { id: 'h002', titulo: 'Compra de software CRM', solicitante: 'Comercial', decisao: 'rejeitado', data: '2026-04-20', valor: 12000.00 },
+    { id: 'h003', titulo: 'Reforma escritório', solicitante: 'Operações', decisao: 'aprovado', data: '2026-04-18', valor: 22000.00 }
+  ]
+};
+
+// ============= HELPERS =============
+const fmtBR = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+const fmtNum = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0).replace('R$', '').trim();
+const fmtDate = d => {
+  if (!d) return '—';
+  const date = new Date(d + 'T00:00:00');
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+const fmtDateShort = d => {
+  if (!d) return '—';
+  const date = new Date(d + 'T00:00:00');
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+};
+
+const today = () => new Date().toISOString().split('T')[0];
+const daysBetween = (d1, d2) => {
+  const a = new Date(d1 + 'T00:00:00');
+  const b = new Date(d2 + 'T00:00:00');
+  return Math.floor((b - a) / (1000 * 60 * 60 * 24));
+};
+
+// Mora Éden: 2% multa + 1% am pro-rata
+function calcMora(valor, diasAtraso) {
+  if (diasAtraso <= 0) return { multa: 0, juros: 0, atualizado: valor };
+  const multa = valor * 0.02;
+  const juros = (valor * 0.01 / 30) * diasAtraso;
+  return { multa, juros, atualizado: valor + multa + juros };
+}
+
+const uid = (prefix = 'x') => prefix + Math.random().toString(36).substr(2, 6);
+
+// ============= STORAGE =============
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    document.getElementById('last-saved').textContent = 'Editado às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    if (syncUrl) scheduleSync();
+  } catch(e) {
+    toast('Erro ao salvar localmente', 'danger');
+  }
+}
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      ['inadimplencia','caixa','aprovacoes','historico'].forEach(k => state[k] = parsed[k] || []);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+async function load() {
+  if (syncUrl) {
+    setSyncStatus('syncing');
+    const ok = await loadFromCloud();
+    if (ok) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+      setSyncStatus('online');
+      return;
+    }
+    setSyncStatus('offline');
+    toast('Servidor não respondeu — usando cache local', 'warning');
+  }
+
+  if (!loadLocal()) {
+    state = JSON.parse(JSON.stringify(SAMPLE));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+  }
+}
+
+// ============= CLOUD SYNC =============
+function setSyncStatus(status) {
+  syncStatus = status;
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  const icon = document.getElementById('sync-icon');
+  const btnLabel = document.getElementById('sync-btn-label');
+  const statusText = document.getElementById('sync-status-text');
+
+  const map = {
+    idle:    { color: 'var(--text-faint)',  text: 'Sem sincronização',  icon: '↻', btn: 'Sincronizar' },
+    syncing: { color: 'var(--warning)',     text: 'Sincronizando…',      icon: '⟳', btn: 'Sincronizando…' },
+    online:  { color: 'var(--success)',     text: 'Sincronizado',        icon: '✓', btn: 'Sincronizar' },
+    offline: { color: 'var(--danger)',      text: 'Offline (só local)',  icon: '⚠', btn: 'Tentar de novo' },
+    error:   { color: 'var(--danger)',      text: 'Erro de sincronia',   icon: '!', btn: 'Tentar de novo' }
+  };
+  const m = map[status] || map.idle;
+
+  if (dot) {
+    dot.style.background = m.color;
+    dot.style.boxShadow = '0 0 8px ' + m.color;
+  }
+  if (label) label.textContent = m.text;
+  if (icon) icon.textContent = m.icon;
+  if (btnLabel) btnLabel.textContent = m.btn;
+  if (statusText) statusText.textContent = m.text.toLowerCase();
+
+  if (syncUrl && lastSyncAt) {
+    const t = document.getElementById('sync-last-text');
+    if (t) t.textContent = lastSyncAt.toLocaleString('pt-BR');
+  }
+}
+
+async function loadFromCloud() {
+  if (!syncUrl) return false;
+  try {
+    const url = syncUrl + (syncToken ? '?token=' + encodeURIComponent(syncToken) : '');
+    const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    ['inadimplencia','caixa','aprovacoes','historico'].forEach(k => {
+      if (Array.isArray(data[k])) {
+        state[k] = data[k].map(item => {
+          // garantir que valor seja número
+          if (item.valor !== undefined) item.valor = parseFloat(item.valor) || 0;
+          return item;
+        });
+      }
+    });
+    lastSyncAt = new Date();
+    return true;
+  } catch (e) {
+    console.error('Load cloud error', e);
+    return false;
+  }
+}
+
+async function saveToCloud() {
+  if (!syncUrl) return false;
+  try {
+    setSyncStatus('syncing');
+    const payload = { token: syncToken, data: state };
+    const res = await fetch(syncUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    lastSyncAt = new Date();
+    setSyncStatus('online');
+    return true;
+  } catch (e) {
+    console.error('Save cloud error', e);
+    setSyncStatus('offline');
+    return false;
+  }
+}
+
+function scheduleSync() {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => saveToCloud(), 800);
+}
+
+async function syncNow() {
+  if (!syncUrl) {
+    toast('Configure a planilha primeiro (aba Dados)', 'warning');
+    setView('dados');
+    return;
+  }
+  setSyncStatus('syncing');
+  // primeiro envia o local pra cloud, depois recarrega
+  const saved = await saveToCloud();
+  if (saved) {
+    const loaded = await loadFromCloud();
+    if (loaded) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+      setSyncStatus('online');
+      toast('Sincronizado', 'success');
+      renderAll();
+      return;
+    }
+  }
+  setSyncStatus('offline');
+  toast('Falha na sincronização', 'danger');
+}
+
+async function connectSync() {
+  const url = document.getElementById('sync-url-input').value.trim();
+  const token = document.getElementById('sync-token-input').value.trim();
+  if (!url) { toast('Informe a URL', 'warning'); return; }
+  if (!url.includes('script.google.com') || !url.endsWith('/exec')) {
+    if (!confirm('A URL não parece ser do Apps Script (esperado terminar em /exec). Continuar mesmo assim?')) return;
+  }
+  syncUrl = url;
+  syncToken = token;
+  localStorage.setItem(SYNC_URL_KEY, url);
+  localStorage.setItem(SYNC_TOKEN_KEY, token);
+  toast('Conectado. Sincronizando…', 'success');
+  await syncNow();
+}
+
+async function testSync() {
+  const url = document.getElementById('sync-url-input').value.trim() || syncUrl;
+  const token = document.getElementById('sync-token-input').value.trim() || syncToken;
+  if (!url) { toast('Informe a URL primeiro', 'warning'); return; }
+  toast('Testando…', 'info');
+  try {
+    const testUrl = url + (token ? '?token=' + encodeURIComponent(token) : '');
+    const res = await fetch(testUrl, { method: 'GET', redirect: 'follow' });
+    const data = await res.json();
+    if (data.error) {
+      toast('Erro: ' + data.error, 'danger');
+    } else {
+      const counts = ['inadimplencia','caixa','aprovacoes','historico']
+        .map(k => `${k}: ${(data[k]||[]).length}`).join(' · ');
+      toast('Conexão OK — ' + counts, 'success');
+    }
+  } catch (e) {
+    toast('Falha: ' + e.message, 'danger');
+  }
+}
+
+function disconnectSync() {
+  if (!confirm('Desconectar da planilha? Os dados continuam no localStorage.')) return;
+  syncUrl = '';
+  syncToken = '';
+  localStorage.removeItem(SYNC_URL_KEY);
+  localStorage.removeItem(SYNC_TOKEN_KEY);
+  document.getElementById('sync-url-input').value = '';
+  document.getElementById('sync-token-input').value = '';
+  setSyncStatus('idle');
+  toast('Desconectado', 'warning');
+}
+
+// ============= TOAST =============
+function toast(msg, type = 'success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; }, 2500);
+  setTimeout(() => t.remove(), 2800);
+}
+
+// ============= NAV =============
+const VIEW_TITLES = {
+  overview: 'Visão Geral',
+  inadimplencia: 'Inadimplência',
+  caixa: 'Fluxo de Caixa',
+  aprovacoes: 'Aprovações',
+  dados: 'Dados'
+};
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const view = item.dataset.view;
+    setView(view);
+  });
+});
+
+function setView(view) {
+  currentView = view;
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.view === view));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
+  document.getElementById('view-title').textContent = VIEW_TITLES[view];
+
+  const addBtn = document.getElementById('add-button');
+  addBtn.style.display = view === 'overview' || view === 'dados' ? 'none' : 'inline-flex';
+
+  renderAll();
+}
+
+// ============= RENDER OVERVIEW =============
+function renderOverview() {
+  const inad = state.inadimplencia.filter(b => b.status !== 'pago');
+  const totalInad = inad.reduce((s, b) => {
+    const dias = daysBetween(b.vencimento, today());
+    return s + calcMora(b.valor, dias).atualizado;
+  }, 0);
+
+  const entradas30 = state.caixa.filter(c => c.tipo === 'entrada' && c.status === 'previsto').reduce((s,c) => s+c.valor, 0);
+  const saidas30 = state.caixa.filter(c => c.tipo === 'saida' && c.status === 'previsto').reduce((s,c) => s+c.valor, 0);
+  const saldoProj = entradas30 - saidas30;
+
+  const aprovPendentes = state.aprovacoes.filter(a => a.status === 'pendente');
+  const valorAprov = aprovPendentes.reduce((s,a) => s+a.valor, 0);
+
+  const grid = document.getElementById('kpi-grid');
+  grid.innerHTML = `
+    <div class="kpi kpi-danger">
+      <div class="kpi-label">Inadimplência total</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalInad)}</div>
+      <div class="kpi-meta">${inad.length} boletos em aberto</div>
+    </div>
+    <div class="kpi kpi-success">
+      <div class="kpi-label">Entradas previstas</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(entradas30)}</div>
+      <div class="kpi-meta">próximos 30 dias</div>
+    </div>
+    <div class="kpi kpi-warning">
+      <div class="kpi-label">Saídas previstas</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(saidas30)}</div>
+      <div class="kpi-meta">próximos 30 dias</div>
+    </div>
+    <div class="kpi ${saldoProj >= 0 ? 'kpi-success' : 'kpi-danger'}">
+      <div class="kpi-label">Saldo projetado</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(saldoProj)}</div>
+      <div class="kpi-meta">${saldoProj >= 0 ? 'fluxo positivo' : 'atenção: fluxo negativo'}</div>
+    </div>
+    <div class="kpi kpi-info">
+      <div class="kpi-label">Aprovações pendentes</div>
+      <div class="kpi-value">${aprovPendentes.length}</div>
+      <div class="kpi-meta">${fmtBR(valorAprov)} em decisão</div>
+    </div>
+  `;
+
+  // upcoming
+  const upcoming = [...inad]
+    .map(b => ({...b, dias: daysBetween(b.vencimento, today())}))
+    .sort((a,b) => a.dias - b.dias)
+    .slice(0, 5);
+
+  const upTbody = document.getElementById('upcoming-tbody');
+  if (upcoming.length === 0) {
+    upTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">Nenhum vencimento próximo.</td></tr>';
+  } else {
+    upTbody.innerHTML = upcoming.map(b => {
+      const dias = b.dias;
+      const status = dias > 0 ? `<span class="badge badge-danger">${dias}d atraso</span>` :
+                     dias === 0 ? `<span class="badge badge-warning">vence hoje</span>` :
+                     `<span class="badge badge-info">em ${-dias}d</span>`;
+      const mora = calcMora(b.valor, Math.max(0, dias));
+      return `<tr>
+        <td class="cell-bold">${b.cliente}</td>
+        <td><span class="unit-tag">${b.unidade}</span></td>
+        <td class="cell-muted">${fmtDate(b.vencimento)}</td>
+        <td class="num cell-bold">${fmtBR(mora.atualizado)}</td>
+        <td>${status}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // overview approvals
+  const aprovDiv = document.getElementById('overview-approvals');
+  const top3 = aprovPendentes.slice(0, 3);
+  if (top3.length === 0) {
+    aprovDiv.innerHTML = '<div class="empty-state"><h4>Nenhuma aprovação pendente</h4><p>Tudo em dia.</p></div>';
+  } else {
+    aprovDiv.innerHTML = top3.map(a => renderApprovalCard(a)).join('');
+  }
+}
+
+// ============= RENDER INADIMPLÊNCIA =============
+function renderInadimplencia() {
+  const search = (document.getElementById('inad-search')?.value || '').toLowerCase();
+  const unitFilter = document.getElementById('inad-unit-filter')?.value || '';
+
+  const filter = document.getElementById('inad-unit-filter');
+  if (filter && filter.options.length === 1) {
+    UNITS.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u; opt.textContent = u;
+      filter.appendChild(opt);
+    });
+  }
+
+  const items = state.inadimplencia
+    .filter(b => b.status !== 'pago')
+    .filter(b => !search || b.cliente.toLowerCase().includes(search))
+    .filter(b => !unitFilter || b.unidade === unitFilter)
+    .map(b => ({...b, dias: Math.max(0, daysBetween(b.vencimento, today()))}))
+    .sort((a,b) => b.dias - a.dias);
+
+  // KPIs inad
+  const totalOriginal = items.reduce((s,b) => s+b.valor, 0);
+  const totalAtualizado = items.reduce((s,b) => s + calcMora(b.valor, b.dias).atualizado, 0);
+  const totalMora = totalAtualizado - totalOriginal;
+
+  document.getElementById('inad-kpi').innerHTML = `
+    <div class="kpi kpi-danger">
+      <div class="kpi-label">Total atualizado</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalAtualizado)}</div>
+      <div class="kpi-meta">${items.length} boletos com mora aplicada</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Valor original</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalOriginal)}</div>
+      <div class="kpi-meta">sem juros e multa</div>
+    </div>
+    <div class="kpi kpi-warning">
+      <div class="kpi-label">Multa + juros</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalMora)}</div>
+      <div class="kpi-meta">acréscimo total</div>
+    </div>
+    <div class="kpi kpi-info">
+      <div class="kpi-label">Atraso médio</div>
+      <div class="kpi-value">${items.length ? Math.round(items.reduce((s,b)=>s+b.dias,0)/items.length) : 0}<span class="currency" style="margin-left:6px">dias</span></div>
+      <div class="kpi-meta">média ponderada</div>
+    </div>
+  `;
+
+  const tbody = document.getElementById('inad-tbody');
+  if (items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">Nenhum boleto em aberto.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(b => {
+    const mora = calcMora(b.valor, b.dias);
+    const statusBadge = b.dias > 30 ? 'badge-danger' : b.dias > 0 ? 'badge-warning' : 'badge-info';
+    const statusText = b.dias > 0 ? `${b.dias}d atraso` : 'em dia';
+    return `<tr>
+      <td class="cell-bold">${b.cliente}</td>
+      <td><span class="unit-tag">${b.unidade}</span></td>
+      <td class="cell-muted">${fmtDate(b.vencimento)}</td>
+      <td class="num">${b.dias}d</td>
+      <td class="num cell-muted">${fmtBR(b.valor)}</td>
+      <td class="num cell-bold">${fmtBR(mora.atualizado)}</td>
+      <td><span class="badge ${statusBadge}">${statusText}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn success" title="Marcar pago" onclick="markPaid('${b.id}')">✓</button>
+          <button class="icon-btn" title="Editar" onclick="editItem('inadimplencia','${b.id}')">✎</button>
+          <button class="icon-btn danger" title="Remover" onclick="removeItem('inadimplencia','${b.id}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ============= RENDER CAIXA =============
+function renderCaixa() {
+  const search = (document.getElementById('cf-search')?.value || '').toLowerCase();
+  const tipoFilter = document.getElementById('cf-tipo-filter')?.value || '';
+
+  const items = state.caixa
+    .filter(c => !search || c.descricao.toLowerCase().includes(search))
+    .filter(c => !tipoFilter || c.tipo === tipoFilter)
+    .sort((a,b) => a.data.localeCompare(b.data));
+
+  const entradas = state.caixa.filter(c => c.tipo === 'entrada' && c.status === 'previsto').reduce((s,c)=>s+c.valor,0);
+  const saidas = state.caixa.filter(c => c.tipo === 'saida' && c.status === 'previsto').reduce((s,c)=>s+c.valor,0);
+  const saldo = entradas - saidas;
+
+  document.getElementById('cf-entradas').textContent = fmtBR(entradas);
+  document.getElementById('cf-saidas').textContent = fmtBR(saidas);
+  const saldoEl = document.getElementById('cf-saldo');
+  saldoEl.textContent = fmtBR(saldo);
+  saldoEl.className = 'cf-card-value ' + (saldo >= 0 ? 'saldo-pos' : 'saldo-neg');
+
+  const tbody = document.getElementById('caixa-tbody');
+  if (items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">Nenhuma movimentação.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(c => {
+    const tipoBadge = c.tipo === 'entrada' ? 'badge-success' : 'badge-danger';
+    const tipoSign = c.tipo === 'entrada' ? '+' : '−';
+    const valorColor = c.tipo === 'entrada' ? 'color:var(--success)' : 'color:var(--danger)';
+    const statusBadge = c.status === 'realizado' ? 'badge-success' : c.status === 'cancelado' ? 'badge-neutral' : 'badge-info';
+    return `<tr>
+      <td class="cell-bold">${c.descricao}</td>
+      <td class="cell-muted">${c.categoria}</td>
+      <td><span class="unit-tag">${c.unidade}</span></td>
+      <td class="cell-muted">${fmtDate(c.data)}</td>
+      <td><span class="badge ${tipoBadge}">${c.tipo}</span></td>
+      <td class="num cell-bold" style="${valorColor}">${tipoSign} ${fmtBR(c.valor)}</td>
+      <td><span class="badge ${statusBadge}">${c.status}</span></td>
+      <td>
+        <div class="row-actions">
+          ${c.status === 'previsto' ? `<button class="icon-btn success" title="Marcar realizado" onclick="markRealized('${c.id}')">✓</button>` : ''}
+          <button class="icon-btn" title="Editar" onclick="editItem('caixa','${c.id}')">✎</button>
+          <button class="icon-btn danger" title="Remover" onclick="removeItem('caixa','${c.id}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ============= RENDER APROVAÇÕES =============
+function renderApprovalCard(a) {
+  return `<div class="approval-card">
+    <div class="approval-icon">◇</div>
+    <div class="approval-content">
+      <h4>${a.titulo}</h4>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${a.descricao || ''}</div>
+      <div class="approval-meta">
+        <span><strong style="color:var(--text-secondary)">${a.solicitante}</strong></span>
+        <span>·</span>
+        <span><span class="badge badge-neutral">${a.categoria}</span></span>
+        <span>·</span>
+        <span>${fmtDate(a.data)}</span>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div class="approval-amount">${fmtBR(a.valor)}</div>
+      <div class="approval-actions" style="margin-top:8px;justify-content:flex-end">
+        <button class="btn btn-sm" style="background:rgba(111,167,72,0.15);color:var(--success);border-color:rgba(111,167,72,0.3)" onclick="decideAprov('${a.id}','aprovado')">Aprovar</button>
+        <button class="btn btn-sm btn-danger" onclick="decideAprov('${a.id}','rejeitado')">Rejeitar</button>
+        <button class="icon-btn" title="Editar" onclick="editItem('aprovacoes','${a.id}')">✎</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAprovacoes() {
+  const pendentes = state.aprovacoes.filter(a => a.status === 'pendente');
+  const list = document.getElementById('aprovacoes-list');
+  if (pendentes.length === 0) {
+    list.innerHTML = '<div class="empty-state"><h4>Nenhuma aprovação pendente</h4><p>Mesa limpa, capitão.</p></div>';
+  } else {
+    list.innerHTML = pendentes.map(renderApprovalCard).join('');
+  }
+
+  const hist = state.historico.slice().reverse();
+  const tbody = document.getElementById('historico-tbody');
+  if (hist.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">Nenhum histórico.</td></tr>';
+  } else {
+    tbody.innerHTML = hist.slice(0,10).map(h => {
+      const decBadge = h.decisao === 'aprovado' ? 'badge-success' : 'badge-danger';
+      return `<tr>
+        <td class="cell-bold">${h.titulo}</td>
+        <td class="cell-muted">${h.solicitante}</td>
+        <td><span class="badge ${decBadge}">${h.decisao}</span></td>
+        <td class="cell-muted">${fmtDate(h.data)}</td>
+        <td class="num">${fmtBR(h.valor)}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+// ============= RENDER DADOS =============
+function renderDados() {
+  document.getElementById('stat-inad').textContent = state.inadimplencia.filter(b=>b.status!=='pago').length;
+  document.getElementById('stat-cf').textContent = state.caixa.length;
+  document.getElementById('stat-aprov').textContent = state.aprovacoes.filter(a=>a.status==='pendente').length;
+}
+
+// ============= ACTIONS =============
+function markPaid(id) {
+  const b = state.inadimplencia.find(x => x.id === id);
+  if (b) {
+    b.status = 'pago';
+    save();
+    toast(`Boleto de ${b.cliente} marcado como pago`);
+    renderAll();
+  }
+}
+
+function markRealized(id) {
+  const c = state.caixa.find(x => x.id === id);
+  if (c) {
+    c.status = 'realizado';
+    save();
+    toast(`${c.descricao} marcado como realizado`);
+    renderAll();
+  }
+}
+
+function decideAprov(id, decisao) {
+  const a = state.aprovacoes.find(x => x.id === id);
+  if (a) {
+    a.status = decisao;
+    state.historico.push({
+      id: uid('h'),
+      titulo: a.titulo,
+      solicitante: a.solicitante,
+      decisao,
+      data: today(),
+      valor: a.valor
+    });
+    state.aprovacoes = state.aprovacoes.filter(x => x.id !== id);
+    save();
+    toast(`${a.titulo} — ${decisao}`, decisao === 'aprovado' ? 'success' : 'warning');
+    renderAll();
+  }
+}
+
+function removeItem(type, id) {
+  if (!confirm('Remover este item?')) return;
+  state[type] = state[type].filter(x => x.id !== id);
+  save();
+  toast('Item removido');
+  renderAll();
+}
+
+// ============= MODAL =============
+function openAddModal() {
+  editingId = null;
+  editingType = currentView === 'inadimplencia' ? 'inadimplencia' :
+                currentView === 'caixa' ? 'caixa' :
+                currentView === 'aprovacoes' ? 'aprovacoes' : null;
+  if (!editingType) return;
+
+  document.getElementById('modal-title').textContent = {
+    inadimplencia: 'Novo boleto',
+    caixa: 'Nova movimentação',
+    aprovacoes: 'Nova aprovação'
+  }[editingType];
+
+  document.getElementById('modal-body').innerHTML = getFormHtml(editingType, null);
+  document.getElementById('modal').classList.add('active');
+}
+
+function editItem(type, id) {
+  editingId = id;
+  editingType = type;
+  const item = state[type].find(x => x.id === id);
+  if (!item) return;
+
+  document.getElementById('modal-title').textContent = 'Editar';
+  document.getElementById('modal-body').innerHTML = getFormHtml(type, item);
+  document.getElementById('modal').classList.add('active');
+}
+
+function getFormHtml(type, item) {
+  const i = item || {};
+  const unitOptions = UNITS.map(u => `<option value="${u}" ${i.unidade===u?'selected':''}>${u}</option>`).join('');
+
+  if (type === 'inadimplencia') {
+    return `
+      <div class="form-group">
+        <label>Cliente</label>
+        <input type="text" id="f-cliente" value="${i.cliente || ''}" placeholder="Nome do cliente">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Unidade</label>
+          <select id="f-unidade">${unitOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>Vencimento</label>
+          <input type="date" id="f-vencimento" value="${i.vencimento || today()}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Valor (R$)</label>
+        <input type="number" id="f-valor" value="${i.valor || ''}" step="0.01" placeholder="0,00">
+      </div>
+    `;
+  }
+
+  if (type === 'caixa') {
+    return `
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="f-descricao" value="${i.descricao || ''}" placeholder="Ex: Mensalidade lote A">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="f-tipo">
+            <option value="entrada" ${i.tipo==='entrada'?'selected':''}>Entrada</option>
+            <option value="saida" ${i.tipo==='saida'?'selected':''}>Saída</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <input type="text" id="f-categoria" value="${i.categoria || ''}" placeholder="Ex: Receita recorrente">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Unidade</label>
+          <select id="f-unidade">${unitOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="f-data" value="${i.data || today()}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="number" id="f-valor" value="${i.valor || ''}" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="f-status">
+            <option value="previsto" ${i.status==='previsto'?'selected':''}>Previsto</option>
+            <option value="realizado" ${i.status==='realizado'?'selected':''}>Realizado</option>
+            <option value="cancelado" ${i.status==='cancelado'?'selected':''}>Cancelado</option>
+          </select>
+        </div>
+      </div>
+    `;
+  }
+
+  if (type === 'aprovacoes') {
+    return `
+      <div class="form-group">
+        <label>Título</label>
+        <input type="text" id="f-titulo" value="${i.titulo || ''}" placeholder="Ex: Compra de equipamentos">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Solicitante</label>
+          <input type="text" id="f-solicitante" value="${i.solicitante || ''}" placeholder="Nome">
+        </div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <input type="text" id="f-categoria" value="${i.categoria || ''}" placeholder="Ex: Compra">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="number" id="f-valor" value="${i.valor || ''}" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="f-data" value="${i.data || today()}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <textarea id="f-descricao" placeholder="Detalhes da solicitação...">${i.descricao || ''}</textarea>
+      </div>
+    `;
+  }
+}
+
+function saveModal() {
+  const type = editingType;
+  const id = editingId || uid(type[0]);
+
+  let item = { id };
+  if (type === 'inadimplencia') {
+    item.cliente = document.getElementById('f-cliente').value.trim();
+    item.unidade = document.getElementById('f-unidade').value;
+    item.vencimento = document.getElementById('f-vencimento').value;
+    item.valor = parseFloat(document.getElementById('f-valor').value) || 0;
+    item.status = 'vencido';
+    if (!item.cliente || !item.valor) { toast('Preencha cliente e valor', 'danger'); return; }
+  } else if (type === 'caixa') {
+    item.descricao = document.getElementById('f-descricao').value.trim();
+    item.tipo = document.getElementById('f-tipo').value;
+    item.categoria = document.getElementById('f-categoria').value.trim() || 'Geral';
+    item.unidade = document.getElementById('f-unidade').value;
+    item.data = document.getElementById('f-data').value;
+    item.valor = parseFloat(document.getElementById('f-valor').value) || 0;
+    item.status = document.getElementById('f-status').value;
+    if (!item.descricao || !item.valor) { toast('Preencha descrição e valor', 'danger'); return; }
+  } else if (type === 'aprovacoes') {
+    item.titulo = document.getElementById('f-titulo').value.trim();
+    item.solicitante = document.getElementById('f-solicitante').value.trim();
+    item.categoria = document.getElementById('f-categoria').value.trim() || 'Geral';
+    item.valor = parseFloat(document.getElementById('f-valor').value) || 0;
+    item.data = document.getElementById('f-data').value;
+    item.descricao = document.getElementById('f-descricao').value.trim();
+    item.status = 'pendente';
+    if (!item.titulo || !item.solicitante) { toast('Preencha título e solicitante', 'danger'); return; }
+  }
+
+  if (editingId) {
+    const idx = state[type].findIndex(x => x.id === editingId);
+    if (idx >= 0) state[type][idx] = item;
+  } else {
+    state[type].push(item);
+  }
+  save();
+  closeModal();
+  toast(editingId ? 'Item atualizado' : 'Item adicionado');
+  renderAll();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+  editingId = null;
+  editingType = null;
+}
+
+// ============= IMPORT/EXPORT =============
+function exportData() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `eden_command_${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup exportado');
+}
+
+function importFromFile(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      mergeImport(data);
+    } catch(err) { toast('JSON inválido', 'danger'); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+}
+
+function importFromText() {
+  const txt = document.getElementById('import-text').value.trim();
+  if (!txt) { toast('Cole um JSON primeiro', 'warning'); return; }
+  try {
+    const data = JSON.parse(txt);
+    mergeImport(data);
+    document.getElementById('import-text').value = '';
+  } catch(e) { toast('JSON inválido', 'danger'); }
+}
+
+function mergeImport(data) {
+  if (!data || typeof data !== 'object') { toast('Estrutura inválida', 'danger'); return; }
+  ['inadimplencia','caixa','aprovacoes','historico'].forEach(k => {
+    if (Array.isArray(data[k])) state[k] = data[k];
+  });
+  save();
+  toast('Dados importados com sucesso');
+  renderAll();
+}
+
+function loadSampleData() {
+  if (!confirm('Substituir os dados atuais pelos dados de exemplo?')) return;
+  state = JSON.parse(JSON.stringify(SAMPLE));
+  save();
+  toast('Dados de exemplo carregados');
+  renderAll();
+}
+
+function clearAllData() {
+  if (!confirm('Apagar TODOS os dados? Esta ação não pode ser desfeita.')) return;
+  state = { inadimplencia:[], caixa:[], aprovacoes:[], historico:[] };
+  save();
+  toast('Todos os dados foram apagados', 'warning');
+  renderAll();
+}
+
+// ============= RENDER ALL =============
+function renderAll() {
+  // badges
+  const inadCount = state.inadimplencia.filter(b=>b.status!=='pago').length;
+  const aprovCount = state.aprovacoes.filter(a=>a.status==='pendente').length;
+  document.getElementById('badge-inad').textContent = inadCount;
+  document.getElementById('badge-inad').style.display = inadCount ? 'inline-block' : 'none';
+  document.getElementById('badge-aprov').textContent = aprovCount;
+  document.getElementById('badge-aprov').style.display = aprovCount ? 'inline-block' : 'none';
+
+  if (currentView === 'overview') renderOverview();
+  if (currentView === 'inadimplencia') renderInadimplencia();
+  if (currentView === 'caixa') renderCaixa();
+  if (currentView === 'aprovacoes') renderAprovacoes();
+  if (currentView === 'dados') renderDados();
+}
+
+// ============= INIT =============
+async function init() {
+  // pré-preenche campos de config
+  document.getElementById('sync-url-input').value = syncUrl;
+  document.getElementById('sync-token-input').value = syncToken;
+
+  setSyncStatus(syncUrl ? 'syncing' : 'idle');
+  await load();
+  if (syncUrl) setSyncStatus(syncStatus === 'offline' ? 'offline' : 'online');
+
+  const now = new Date();
+  document.getElementById('current-date').textContent = now.toLocaleDateString('pt-BR', {
+    weekday:'long', day:'2-digit', month:'long', year:'numeric'
+  });
+  setView('overview');
+
+  // auto-refresh do cloud a cada 60s
+  setInterval(async () => {
+    if (!syncUrl || syncStatus === 'syncing') return;
+    const ok = await loadFromCloud();
+    if (ok) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+      setSyncStatus('online');
+      renderAll();
+    }
+  }, 60000);
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+init();
+</script>
+
+</body>
+</html>
