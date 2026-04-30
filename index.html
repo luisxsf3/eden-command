@@ -1410,11 +1410,7 @@ async function loadFromCloud() {
     if (data.error) throw new Error(data.error);
     ['inadimplencia','caixa','aprovacoes','historico'].forEach(k => {
       if (Array.isArray(data[k])) {
-        state[k] = data[k].map(item => {
-          // garantir que valor seja número
-          if (item.valor !== undefined) item.valor = parseFloat(item.valor) || 0;
-          return item;
-        });
+        state[k] = data[k].map(item => normalizeItem(item));
       }
     });
     lastSyncAt = new Date();
@@ -1423,6 +1419,44 @@ async function loadFromCloud() {
     console.error('Load cloud error', e);
     return false;
   }
+}
+
+// Normaliza tipos vindos do Google Sheets:
+// - valor: número (Sheets devolve às vezes string formatada)
+// - transitoria: booleano (Sheets devolve "TRUE"/"FALSE"/""/booleano)
+// - vinculo: string ou undefined (não string vazia)
+// - status, demais campos: string limpa
+function normalizeItem(item) {
+  const out = { ...item };
+  if (out.valor !== undefined && out.valor !== null && out.valor !== '') {
+    if (typeof out.valor === 'string') {
+      // remove R$, espaços, troca vírgula por ponto, mantém sinal de menos
+      const cleaned = out.valor.replace(/[R$\s.]/g, '').replace(',', '.');
+      out.valor = parseFloat(cleaned) || 0;
+    } else {
+      out.valor = parseFloat(out.valor) || 0;
+    }
+  } else {
+    out.valor = 0;
+  }
+  // transitoria: aceita TRUE/FALSE/true/false/1/0/"sim"/""/null
+  if (out.transitoria !== undefined) {
+    const v = out.transitoria;
+    if (typeof v === 'boolean') out.transitoria = v;
+    else if (typeof v === 'string') {
+      const s = v.trim().toLowerCase();
+      out.transitoria = (s === 'true' || s === 'sim' || s === '1' || s === 'verdadeiro');
+    } else if (typeof v === 'number') out.transitoria = v === 1;
+    else out.transitoria = false;
+  }
+  // vinculo vazio vira undefined (não string "")
+  if (out.vinculo === '' || out.vinculo === null) delete out.vinculo;
+  if (typeof out.vinculo === 'string') out.vinculo = out.vinculo.trim() || undefined;
+  // limpar campos string trim
+  ['id','cliente','unidade','status','descricao','categoria','solicitante','titulo','tipo','data','vencimento','decisao'].forEach(f => {
+    if (typeof out[f] === 'string') out[f] = out[f].trim();
+  });
+  return out;
 }
 
 async function saveToCloud() {
