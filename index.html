@@ -2237,6 +2237,7 @@ function renderApprovalCard(a, allItems) {
         <button class="btn btn-sm" style="background:rgba(111,167,72,0.15);color:var(--success);border-color:rgba(111,167,72,0.3)" onclick="decideAprov('${a.id}','aprovado')">Aprovar</button>
         <button class="btn btn-sm btn-danger" onclick="decideAprov('${a.id}','rejeitado')">Rejeitar</button>
         <button class="icon-btn" title="Editar" onclick="editItem('aprovacoes','${a.id}')">✎</button>
+        <button class="icon-btn danger" title="Excluir definitivamente" onclick="hardDeleteAprov('${a.id}')">✕</button>
       </div>
     </div>
   </div>`;
@@ -2323,6 +2324,34 @@ function markRealized(id) {
     toast(`${c.descricao} marcado como realizado`);
     renderAll();
   }
+}
+
+function hardDeleteAprov(id) {
+  const a = state.aprovacoes.find(x => x.id === id);
+  if (!a) return;
+
+  // Identificar grupo: item + contrapartida (se transitória) + vinculados
+  const grupo = [a];
+  if (a.transitoria && a.valor > 0) {
+    const contrapartida = state.aprovacoes.find(x =>
+      x.transitoria && x.valor < 0 &&
+      Math.abs(x.valor + a.valor) < 0.01 && x.data === a.data && x.id !== a.id
+    );
+    if (contrapartida) grupo.push(contrapartida);
+    state.aprovacoes.filter(x => x.vinculo === a.id).forEach(x => grupo.push(x));
+  }
+
+  const aviso = grupo.length > 1
+    ? `Excluir DEFINITIVAMENTE "${a.titulo}" + ${grupo.length-1} item(ns) vinculado(s)?\n\nEsta ação NÃO entra no histórico e NÃO pode ser desfeita.`
+    : `Excluir DEFINITIVAMENTE "${a.titulo}"?\n\nEsta ação NÃO entra no histórico e NÃO pode ser desfeita.`;
+
+  if (!confirm(aviso)) return;
+
+  const ids = grupo.map(x => x.id);
+  state.aprovacoes = state.aprovacoes.filter(x => !ids.includes(x.id));
+  save();
+  toast(grupo.length > 1 ? `${grupo.length} itens excluídos` : 'Item excluído', 'warning');
+  renderAll();
 }
 
 function decideAprov(id, decisao) {
