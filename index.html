@@ -904,8 +904,8 @@
       <span>Visão Geral</span>
     </div>
     <div class="nav-item" data-view="inadimplencia">
-      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>
-      <span>Inadimplência</span>
+      <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h2"/></svg></span>
+      <span>Contas a Receber</span>
       <span class="nav-badge" id="badge-inad">0</span>
     </div>
     <div class="nav-item" data-view="caixa" style="display:none">
@@ -1019,9 +1019,18 @@
   <section class="view" id="view-inadimplencia">
     <div class="kpi-grid" id="inad-kpi"></div>
 
+    <div class="section" style="margin-bottom:20px;">
+      <div class="section-header">
+        <h3 class="section-title">Evolução mensal<span class="section-title-meta">total a receber por unidade</span></h3>
+      </div>
+      <div style="padding:16px 20px;height:240px;position:relative;">
+        <canvas id="chart-evolucao"></canvas>
+      </div>
+    </div>
+
     <div class="section">
       <div class="section-header">
-        <h3 class="section-title">Boletos em aberto<span class="section-title-meta">com mora aplicada</span></h3>
+        <h3 class="section-title">Carteira de boletos<span class="section-title-meta">com mora aplicada quando vencido</span></h3>
       </div>
       <div class="filters">
         <input type="text" class="filter-input" placeholder="Buscar cliente..." id="inad-search" oninput="renderInadimplencia()">
@@ -1029,8 +1038,10 @@
           <option value="">Todas as unidades</option>
         </select>
         <select class="filter-input" id="inad-status-filter" onchange="renderInadimplencia()">
-          <option value="aberto">Em aberto</option>
-          <option value="pago">Pagos</option>
+          <option value="aberto">A vencer + atrasados</option>
+          <option value="atrasado">Inadimplência (atrasados)</option>
+          <option value="avencer">Apenas a vencer</option>
+          <option value="pago">Recebidos</option>
           <option value="excluido">Excluídos</option>
           <option value="todos">Todos</option>
         </select>
@@ -1041,7 +1052,7 @@
             <th>Cliente</th>
             <th>Unidade</th>
             <th>Vencimento</th>
-            <th class="num">Atraso</th>
+            <th class="num">Dias</th>
             <th class="num">Valor original</th>
             <th class="num">Valor atualizado</th>
             <th>Status</th>
@@ -1570,7 +1581,7 @@ function toast(msg, type = 'success') {
 // ============= NAV =============
 const VIEW_TITLES = {
   overview: 'Visão Geral',
-  inadimplencia: 'Inadimplência',
+  inadimplencia: 'Contas a Receber',
   caixa: 'Fluxo de Caixa',
   aprovacoes: 'Aprovações',
   dados: 'Dados'
@@ -1819,56 +1830,85 @@ function renderInadimplencia() {
     });
   }
 
+  // Helpers de classificação
+  const isOpenStatus = b => b.status !== 'pago' && b.status !== 'excluido';
+  const calcDias = b => daysBetween(b.vencimento, today()); // positivo = atrasado, negativo = ainda vai vencer
+
   // Filtro por status
   let filtered = state.inadimplencia;
-  if (statusFilter === 'aberto') filtered = filtered.filter(b => b.status !== 'pago' && b.status !== 'excluido');
-  else if (statusFilter === 'pago') filtered = filtered.filter(b => b.status === 'pago');
-  else if (statusFilter === 'excluido') filtered = filtered.filter(b => b.status === 'excluido');
+  if (statusFilter === 'aberto') {
+    filtered = filtered.filter(b => isOpenStatus(b));
+  } else if (statusFilter === 'atrasado') {
+    filtered = filtered.filter(b => isOpenStatus(b) && calcDias(b) > 0);
+  } else if (statusFilter === 'avencer') {
+    filtered = filtered.filter(b => isOpenStatus(b) && calcDias(b) <= 0);
+  } else if (statusFilter === 'pago') {
+    filtered = filtered.filter(b => b.status === 'pago');
+  } else if (statusFilter === 'excluido') {
+    filtered = filtered.filter(b => b.status === 'excluido');
+  }
   // 'todos' = sem filtro de status
 
   const items = filtered
     .filter(b => !search || b.cliente.toLowerCase().includes(search))
     .filter(b => !unitFilter || b.unidade === unitFilter)
-    .map(b => ({...b, dias: Math.max(0, daysBetween(b.vencimento, today()))}))
+    .map(b => ({...b, dias: calcDias(b)}))
     .sort((a,b) => b.dias - a.dias);
 
-  // KPIs inad — sempre calcula sobre os em aberto
-  const abertos = state.inadimplencia.filter(b => b.status !== 'pago' && b.status !== 'excluido');
-  const totalOriginal = abertos.reduce((s,b) => s+b.valor, 0);
-  const totalAtualizado = abertos.reduce((s,b) => {
-    const d = Math.max(0, daysBetween(b.vencimento, today()));
+  // KPIs — 4 cards: Total a receber, A vencer, Inadimplência, Recebido
+  const abertos = state.inadimplencia.filter(b => isOpenStatus(b));
+  const atrasados = abertos.filter(b => calcDias(b) > 0);
+  const aVencer = abertos.filter(b => calcDias(b) <= 0);
+  const pagos = state.inadimplencia.filter(b => b.status === 'pago');
+
+  const totalAReceber = abertos.reduce((s,b) => {
+    const d = Math.max(0, calcDias(b));
     return s + calcMora(b.valor, d).atualizado;
   }, 0);
-  const totalMora = totalAtualizado - totalOriginal;
-  const totalPagos = state.inadimplencia.filter(b => b.status === 'pago').reduce((s,b) => s+b.valor, 0);
+  const totalAVencer = aVencer.reduce((s,b) => s + b.valor, 0);
+  const totalAtrasados = atrasados.reduce((s,b) => s + calcMora(b.valor, calcDias(b)).atualizado, 0);
+  const totalPagos = pagos.reduce((s,b) => s + b.valor, 0);
+
+  // próximo vencimento
+  let proxVenc = '—';
+  if (aVencer.length > 0) {
+    const sorted = [...aVencer].sort((a,b) => a.vencimento.localeCompare(b.vencimento));
+    proxVenc = fmtDateShort(sorted[0].vencimento);
+  }
 
   document.getElementById('inad-kpi').innerHTML = `
-    <div class="kpi kpi-danger">
-      <div class="kpi-label">Total atualizado</div>
-      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalAtualizado)}</div>
-      <div class="kpi-meta">${abertos.length} boletos em aberto</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Valor original</div>
-      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalOriginal)}</div>
-      <div class="kpi-meta">sem juros e multa</div>
+    <div class="kpi kpi-info">
+      <div class="kpi-label">Total a receber</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalAReceber)}</div>
+      <div class="kpi-meta">${abertos.length} boletos · todos os status</div>
     </div>
     <div class="kpi kpi-warning">
-      <div class="kpi-label">Multa + juros</div>
-      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalMora)}</div>
-      <div class="kpi-meta">acréscimo total</div>
+      <div class="kpi-label">A vencer</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalAVencer)}</div>
+      <div class="kpi-meta">${aVencer.length} boletos · próximo: ${proxVenc}</div>
+    </div>
+    <div class="kpi kpi-danger">
+      <div class="kpi-label">Inadimplência</div>
+      <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalAtrasados)}</div>
+      <div class="kpi-meta">${atrasados.length} boletos atrasados</div>
     </div>
     <div class="kpi kpi-success">
-      <div class="kpi-label">Total recebido</div>
+      <div class="kpi-label">Recebido</div>
       <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalPagos)}</div>
-      <div class="kpi-meta">${state.inadimplencia.filter(b => b.status === 'pago').length} boletos pagos</div>
+      <div class="kpi-meta">${pagos.length} boletos liquidados</div>
     </div>
   `;
 
+  // ---- Gráfico evolução mensal ----
+  renderEvolucaoChart();
+
+  // ---- Tabela ----
   const tbody = document.getElementById('inad-tbody');
   const emptyMsg = {
-    aberto: 'Nenhum boleto em aberto ou a vencer.',
-    pago: 'Nenhum boleto pago.',
+    aberto: 'Nenhum boleto em aberto.',
+    atrasado: 'Nenhum boleto atrasado — carteira saudável.',
+    avencer: 'Nenhum boleto a vencer.',
+    pago: 'Nenhum boleto recebido.',
     excluido: 'Nenhum boleto excluído.',
     todos: 'Nenhum boleto cadastrado.'
   };
@@ -1877,21 +1917,28 @@ function renderInadimplencia() {
     return;
   }
   tbody.innerHTML = items.map(b => {
-    const mora = calcMora(b.valor, b.dias);
-    const isOpen = b.status !== 'pago' && b.status !== 'excluido';
+    const diasMora = Math.max(0, b.dias);
+    const mora = calcMora(b.valor, diasMora);
+    const isOpen = isOpenStatus(b);
     let statusBadge, statusText;
-    if (b.status === 'pago') { statusBadge = 'badge-success'; statusText = 'pago'; }
+    if (b.status === 'pago') { statusBadge = 'badge-success'; statusText = 'recebido'; }
     else if (b.status === 'excluido') { statusBadge = 'badge-neutral'; statusText = 'excluído'; }
-    else { statusBadge = b.dias > 30 ? 'badge-danger' : b.dias > 0 ? 'badge-warning' : 'badge-info'; statusText = b.dias > 0 ? `${b.dias}d atraso` : 'a vencer'; }
+    else if (b.dias > 30) { statusBadge = 'badge-danger'; statusText = `${b.dias}d atraso`; }
+    else if (b.dias > 0) { statusBadge = 'badge-warning'; statusText = `${b.dias}d atraso`; }
+    else { statusBadge = 'badge-info'; statusText = b.dias === 0 ? 'vence hoje' : 'a vencer'; }
 
-    // Ações mudam por status
+    // Coluna Dias: positivo = atraso, negativo = falta para vencer
+    const diasCell = b.dias > 0 ? `<span style="color:var(--danger)">+${b.dias}d</span>` :
+                     b.dias === 0 ? `<span style="color:var(--warning)">hoje</span>` :
+                     `<span class="cell-muted">${b.dias}d</span>`;
+
     let actions = '';
     if (isOpen) {
       actions = `
-        <button class="icon-btn success" title="Marcar pago" onclick="markPaid('${b.id}')">✓</button>
+        <button class="icon-btn success" title="Marcar recebido" onclick="markPaid('${b.id}')">✓</button>
         <button class="icon-btn" title="Editar" onclick="editItem('inadimplencia','${b.id}')">✎</button>
         <button class="icon-btn danger" title="Excluir" onclick="softDeleteInad('${b.id}')">✕</button>`;
-    } else if (b.status === 'pago' || b.status === 'excluido') {
+    } else {
       actions = `<button class="icon-btn" title="Reabrir" onclick="reopenInad('${b.id}')">↩</button>`;
     }
 
@@ -1899,7 +1946,7 @@ function renderInadimplencia() {
       <td class="cell-bold">${b.cliente}</td>
       <td><span class="unit-tag">${b.unidade}</span></td>
       <td class="cell-muted">${fmtDate(b.vencimento)}</td>
-      <td class="num">${b.dias}d</td>
+      <td class="num">${diasCell}</td>
       <td class="num cell-muted">${fmtBR(b.valor)}</td>
       <td class="num cell-bold">${fmtBR(mora.atualizado)}</td>
       <td><span class="badge ${statusBadge}">${statusText}</span></td>
@@ -1908,6 +1955,98 @@ function renderInadimplencia() {
       </td>
     </tr>`;
   }).join('');
+}
+
+// ============= EVOLUÇÃO MENSAL =============
+function renderEvolucaoChart() {
+  const canvas = document.getElementById('chart-evolucao');
+  if (!canvas) return;
+  const existing = Chart.getChart('chart-evolucao');
+  if (existing) existing.destroy();
+
+  // Construir últimos 6 meses (incluindo o atual) baseado em vencimento
+  const hoje = new Date();
+  const meses = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    meses.push({
+      ano: d.getFullYear(),
+      mes: d.getMonth(),
+      label: d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')
+    });
+  }
+
+  // Para cada mês, somar todos os boletos cujo vencimento cai naquele mês,
+  // independente de status (pago, excluído, etc) — assim mostra evolução real da base
+  const porMesUnidade = {};
+  UNITS.forEach(u => { porMesUnidade[u] = meses.map(() => 0); });
+
+  state.inadimplencia.forEach(b => {
+    if (b.status === 'excluido') return;
+    if (!b.vencimento) return;
+    const dt = new Date(b.vencimento + 'T00:00:00');
+    meses.forEach((m, idx) => {
+      if (dt.getFullYear() === m.ano && dt.getMonth() === m.mes) {
+        if (porMesUnidade[b.unidade] !== undefined) {
+          porMesUnidade[b.unidade][idx] += b.valor;
+        }
+      }
+    });
+  });
+
+  const colors = { 'Plenitude': '#4A7C2E', 'Edificação': '#5894C4' };
+  const datasets = UNITS.map(u => ({
+    label: u,
+    data: porMesUnidade[u].map(v => Math.round(v * 100) / 100),
+    borderColor: colors[u] || '#8A968A',
+    backgroundColor: (colors[u] || '#8A968A') + '26',
+    fill: true,
+    tension: 0.35,
+    borderWidth: 2,
+    pointRadius: 3,
+    pointBackgroundColor: colors[u] || '#8A968A'
+  }));
+
+  new Chart(canvas, {
+    type: 'line',
+    data: { labels: meses.map(m => m.label), datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          align: 'end',
+          labels: { color: '#B8C2B5', font: { size: 11 }, padding: 10, usePointStyle: true, pointStyleWidth: 8, boxHeight: 8 }
+        },
+        tooltip: {
+          backgroundColor: '#0F1610',
+          borderColor: '#2A3A26',
+          borderWidth: 1,
+          titleColor: '#E8EDE5',
+          bodyColor: '#B8C2B5',
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: R$ ${ctx.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: v => 'R$ ' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v.toFixed(0)),
+            color: '#8A968A', font: { size: 11 }
+          },
+          grid: { color: 'rgba(128,128,128,0.06)' }
+        },
+        x: {
+          ticks: { color: '#B8C2B5', font: { size: 11 } },
+          grid: { display: false }
+        }
+      }
+    }
+  });
 }
 
 // ============= RENDER CAIXA =============
