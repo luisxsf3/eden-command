@@ -1572,7 +1572,8 @@ function renderOverview() {
   const totalRecebido = pagos.reduce((s, b) => s + b.valor, 0);
 
   const aprovPendentes = state.aprovacoes.filter(a => a.status === 'pendente');
-  const valorAprov = aprovPendentes.reduce((s,a) => s+a.valor, 0);
+  const valorAprov = calcAprovacoesTotal(aprovPendentes);
+  const countAprov = calcAprovacoesCount(aprovPendentes);
 
   const grid = document.getElementById('kpi-grid');
   grid.innerHTML = `
@@ -1588,7 +1589,7 @@ function renderOverview() {
     </div>
     <div class="kpi kpi-info">
       <div class="kpi-label">Aprovações pendentes</div>
-      <div class="kpi-value">${aprovPendentes.length}</div>
+      <div class="kpi-value">${countAprov}</div>
       <div class="kpi-meta">${fmtBR(valorAprov)} em decisão</div>
     </div>
   `;
@@ -1755,11 +1756,17 @@ function renderOverview() {
 
   // ---- APROVAÇÕES ----
   const aprovDiv = document.getElementById('overview-approvals');
-  const top3 = aprovPendentes.slice(0, 3);
+  const visivelOverview = aprovPendentes.filter(a => !a.vinculo && !(a.transitoria && a.valor < 0));
+  visivelOverview.sort((a, b) => {
+    const tA = a.transitoria && a.valor > 0 ? 0 : 1;
+    const tB = b.transitoria && b.valor > 0 ? 0 : 1;
+    return tA - tB;
+  });
+  const top3 = visivelOverview.slice(0, 3);
   if (top3.length === 0) {
     aprovDiv.innerHTML = '<div class="empty-state"><h4>Nenhuma aprovação pendente</h4><p>Mesa limpa, capitão.</p></div>';
   } else {
-    aprovDiv.innerHTML = top3.map(a => renderApprovalCard(a)).join('');
+    aprovDiv.innerHTML = top3.map(a => renderApprovalCard(a, aprovPendentes)).join('');
   }
 }
 
@@ -1974,13 +1981,73 @@ function getCategoryIcon(cat) {
   return icons[c] || fallback;
 }
 
-function renderApprovalCard(a) {
+// Calcula total de aprovações desconsiderando pares transitórios e itens vinculados.
+// Regras:
+// - Itens com transitoria=true e valor<0 NÃO somam (é a contrapartida da entrada)
+// - Itens com vinculo preenchido NÃO somam (são detalhamento da transitória positiva)
+// - Itens normais e transitórias positivas SOMAM
+function calcAprovacoesTotal(items) {
+  return items.reduce((s, a) => {
+    if (a.transitoria && a.valor < 0) return s;
+    if (a.vinculo) return s;
+    return s + a.valor;
+  }, 0);
+}
+
+function calcAprovacoesCount(items) {
+  // Conta como "1 transação" cada transitória positiva (com seus vinculados juntos),
+  // mais cada item solto que não é transitória negativa nem vinculado.
+  return items.filter(a => {
+    if (a.transitoria && a.valor < 0) return false;
+    if (a.vinculo) return false;
+    return true;
+  }).length;
+}
+
+function getVinculados(items, parentId) {
+  return items.filter(x => x.vinculo === parentId);
+}
+
+function renderApprovalCard(a, allItems) {
   const icon = getCategoryIcon(a.categoria);
   const iconHtml = `<div class="approval-icon" style="background:${icon.bg}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${icon.color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icon.svg}</svg></div>`;
+
+  // Se for transitória positiva, mostrar itens vinculados como detalhamento
+  let detalhamento = '';
+  if (a.transitoria && a.valor > 0 && allItems) {
+    const vincs = getVinculados(allItems, a.id);
+    if (vincs.length > 0) {
+      detalhamento = `<div style="margin-top:10px;padding:10px 12px;background:var(--bg-elev-2);border-radius:6px;border-left:2px solid var(--eden-accent)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-faint);margin-bottom:6px;font-weight:600">Detalhamento — destino dos recursos</div>
+        ${vincs.map(v => {
+          const vIcon = getCategoryIcon(v.categoria);
+          return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--text-secondary)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${vIcon.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${vIcon.svg}</svg>
+            <span style="flex:1">${v.titulo}</span>
+            <span style="font-family:var(--font-mono);color:var(--text-muted)">${fmtBR(v.valor)}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+  }
+
+  // Badge especial pra transitória
+  let transitTag = '';
+  if (a.transitoria) {
+    const txt = a.valor > 0 ? 'transferência' : 'contrapartida';
+    transitTag = ` <span class="badge badge-info" style="background:rgba(29,158,117,0.12);color:#1D9E75;border-color:rgba(29,158,117,0.25)">${txt}</span>`;
+  }
+
+  // Valor exibido com sinal e estilo diferente pra contrapartida
+  let valorHtml = `<div class="approval-amount">${fmtBR(a.valor)}</div>`;
+  if (a.transitoria && a.valor < 0) {
+    valorHtml = `<div class="approval-amount" style="color:var(--text-faint);font-size:14px;font-style:italic">${fmtBR(a.valor)}<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px">não soma ao total</div></div>`;
+  }
+
   return `<div class="approval-card">
     ${iconHtml}
     <div class="approval-content">
-      <h4>${a.titulo}</h4>
+      <h4>${a.titulo}${transitTag}</h4>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${a.descricao || ''}</div>
       <div class="approval-meta">
         <span><strong style="color:var(--text-secondary)">${a.solicitante}</strong></span>
@@ -1989,9 +2056,10 @@ function renderApprovalCard(a) {
         <span>·</span>
         <span>${fmtDate(a.data)}</span>
       </div>
+      ${detalhamento}
     </div>
     <div style="text-align:right">
-      <div class="approval-amount">${fmtBR(a.valor)}</div>
+      ${valorHtml}
       <div class="approval-actions" style="margin-top:8px;justify-content:flex-end">
         <button class="btn btn-sm" style="background:rgba(111,167,72,0.15);color:var(--success);border-color:rgba(111,167,72,0.3)" onclick="decideAprov('${a.id}','aprovado')">Aprovar</button>
         <button class="btn btn-sm btn-danger" onclick="decideAprov('${a.id}','rejeitado')">Rejeitar</button>
@@ -2003,11 +2071,19 @@ function renderApprovalCard(a) {
 
 function renderAprovacoes() {
   const pendentes = state.aprovacoes.filter(a => a.status === 'pendente');
+  // Ordem: transitórias positivas primeiro, depois itens normais. Vinculados não aparecem solo.
+  const visiveis = pendentes.filter(a => !a.vinculo);
+  visiveis.sort((a, b) => {
+    const tA = a.transitoria && a.valor > 0 ? 0 : (a.transitoria ? 2 : 1);
+    const tB = b.transitoria && b.valor > 0 ? 0 : (b.transitoria ? 2 : 1);
+    return tA - tB;
+  });
+
   const list = document.getElementById('aprovacoes-list');
-  if (pendentes.length === 0) {
+  if (visiveis.length === 0) {
     list.innerHTML = '<div class="empty-state"><h4>Nenhuma aprovação pendente</h4><p>Mesa limpa, capitão.</p></div>';
   } else {
-    list.innerHTML = pendentes.map(renderApprovalCard).join('');
+    list.innerHTML = visiveis.map(a => renderApprovalCard(a, pendentes)).join('');
   }
 
   const hist = state.historico.slice().reverse();
@@ -2078,21 +2154,44 @@ function markRealized(id) {
 
 function decideAprov(id, decisao) {
   const a = state.aprovacoes.find(x => x.id === id);
-  if (a) {
-    a.status = decisao;
+  if (!a) return;
+
+  // Lista de itens a decidir: o item + sua contrapartida (se transitória) + seus vinculados
+  const grupo = [a];
+
+  if (a.transitoria && a.valor > 0) {
+    // Adicionar contrapartida (transitória negativa com mesmo valor absoluto e mesma data)
+    const contrapartida = state.aprovacoes.find(x =>
+      x.transitoria && x.valor < 0 &&
+      Math.abs(x.valor + a.valor) < 0.01 && x.data === a.data && x.id !== a.id
+    );
+    if (contrapartida) grupo.push(contrapartida);
+    // Adicionar vinculados
+    state.aprovacoes.filter(x => x.vinculo === a.id).forEach(x => grupo.push(x));
+  }
+
+  grupo.forEach(item => {
+    item.status = decisao;
     state.historico.push({
       id: uid('h'),
-      titulo: a.titulo,
-      solicitante: a.solicitante,
+      titulo: item.titulo,
+      solicitante: item.solicitante,
       decisao,
       data: today(),
-      valor: a.valor
+      valor: item.valor
     });
-    state.aprovacoes = state.aprovacoes.filter(x => x.id !== id);
-    save();
+  });
+
+  const ids = grupo.map(x => x.id);
+  state.aprovacoes = state.aprovacoes.filter(x => !ids.includes(x.id));
+  save();
+
+  if (grupo.length > 1) {
+    toast(`${a.titulo} + ${grupo.length-1} item(ns) — ${decisao}`, decisao === 'aprovado' ? 'success' : 'warning');
+  } else {
     toast(`${a.titulo} — ${decisao}`, decisao === 'aprovado' ? 'success' : 'warning');
-    renderAll();
   }
+  renderAll();
 }
 
 function removeItem(type, id) {
@@ -2367,8 +2466,9 @@ function clearAllData() {
 // ============= RENDER ALL =============
 function renderAll() {
   // badges
-  const inadCount = state.inadimplencia.filter(b=>b.status!=='pago').length;
-  const aprovCount = state.aprovacoes.filter(a=>a.status==='pendente').length;
+  const inadCount = state.inadimplencia.filter(b=>b.status!=='pago' && b.status!=='excluido').length;
+  const pendentes = state.aprovacoes.filter(a=>a.status==='pendente');
+  const aprovCount = calcAprovacoesCount(pendentes);
   document.getElementById('badge-inad').textContent = inadCount;
   document.getElementById('badge-inad').style.display = inadCount ? 'inline-block' : 'none';
   document.getElementById('badge-aprov').textContent = aprovCount;
