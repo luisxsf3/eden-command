@@ -989,7 +989,7 @@
 
     .topbar-logo {
       display: block;
-      width: 80px;
+      width: 110px;
       height: auto;
       filter: invert(1) brightness(1.2);
       mix-blend-mode: screen;
@@ -1310,16 +1310,7 @@
       <button class="btn btn-ghost btn-sm" id="sync-btn" onclick="syncNow()" title="Sincronizar agora">
         <span id="sync-icon">↻</span> <span id="sync-btn-label">Sincronizar</span>
       </button>
-      <button class="btn btn-ghost btn-sm btn-desktop-only" onclick="exportData()">
-        <span>↓</span> Exportar
-      </button>
-      <button class="btn btn-ghost btn-sm btn-desktop-only" onclick="document.getElementById('import-file').click()">
-        <span>↑</span> Importar
-      </button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importFromFile(event)">
-      <button class="btn btn-primary btn-sm" id="add-button" onclick="openAddModal()">
-        <span>+</span> Novo
-      </button>
     </div>
   </div>
 
@@ -2000,9 +1991,6 @@ function setView(view) {
 
   // Mobile nav sync
   document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.toggle('active', i.dataset.view === view));
-
-  const addBtn = document.getElementById('add-button');
-  addBtn.style.display = view === 'overview' || view === 'dados' ? 'none' : 'inline-flex';
 
   // Scroll to top on view change (mobile UX)
   window.scrollTo({ top: 0, behavior: 'smooth' });
