@@ -87,10 +87,10 @@
     width: 140px;
     height: auto;
     display: block;
-    filter: invert(1) brightness(1.2);
-    mix-blend-mode: screen;
+    filter: invert(1) brightness(1.05);
     margin-bottom: 4px;
   }
+
   .brand-sub {
     font-size: 10px;
     text-transform: uppercase;
@@ -888,13 +888,266 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--eden-accent); }
 
   /* Resp */
+  /* ============= MOBILE ============= */
   @media (max-width: 900px) {
-    body { grid-template-columns: 1fr; }
+    body {
+      grid-template-columns: 1fr;
+      padding-bottom: 64px;
+    }
+
     aside { display: none; }
+
+    /* Bottom nav */
+    .mobile-nav {
+      display: flex !important;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: var(--bg-elev-1);
+      border-top: 1px solid var(--border-soft);
+      z-index: 50;
+      padding: 0 8px;
+      align-items: center;
+      justify-content: space-around;
+      backdrop-filter: blur(12px);
+    }
+
+    .mobile-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+      border: none;
+      background: transparent;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-nav-item.active {
+      color: var(--eden-glow);
+      background: rgba(74,124,46,0.1);
+    }
+
+    .mobile-nav-item svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .mobile-nav-badge {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      background: var(--danger);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      min-width: 16px;
+      height: 16px;
+      line-height: 16px;
+      text-align: center;
+      border-radius: 8px;
+      padding: 0 4px;
+    }
+
+    /* Topbar mobile */
+    .topbar {
+      padding: 14px 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .topbar-title h1 {
+      font-size: 20px;
+    }
+
+    .topbar-date {
+      font-size: 10px;
+    }
+
+    .topbar-actions {
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .topbar-actions .btn {
+      padding: 6px 10px;
+      font-size: 11px;
+    }
+
+    /* KPI grid mobile */
+    .kpi-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .kpi {
+      padding: 14px;
+    }
+
+    .kpi-value {
+      font-size: 24px;
+    }
+
+    .kpi-value .currency {
+      font-size: 12px;
+    }
+
+    .kpi-label {
+      font-size: 10px;
+    }
+
+    .kpi-meta {
+      font-size: 10px;
+    }
+
+    /* Charts */
+    .view > div[style*="grid-template-columns: 1.2fr"] {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Sections */
+    .section { border-radius: 8px; }
+
+    .section-header {
+      padding: 12px 14px;
+    }
+
+    .section-title {
+      font-size: 17px;
+    }
+
+    .section-title-meta {
+      display: none;
+    }
+
+    /* Tables: horizontal scroll */
+    .section > table,
+    .section > .filters + table {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .section > table thead,
+    .section > table tbody,
+    .section > table tr {
+      display: table;
+      width: 100%;
+      table-layout: auto;
+    }
+
+    table {
+      min-width: 600px;
+    }
+
+    thead th {
+      padding: 10px 12px;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 10px 12px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    /* Filters */
+    .filters {
+      padding: 10px 14px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .filter-input {
+      flex: 1 1 120px;
+      min-width: 100px;
+      font-size: 12px;
+    }
+
+    /* Content */
+    .view {
+      padding: 16px;
+    }
+
+    /* Approval cards */
+    .approval-card {
+      grid-template-columns: auto 1fr;
+      padding: 14px;
+      gap: 12px;
+    }
+
+    .approval-card > div:last-child {
+      grid-column: 1 / -1;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .approval-amount {
+      font-size: 15px;
+    }
+
+    .approval-actions {
+      gap: 4px;
+    }
+
+    .approval-meta {
+      flex-wrap: wrap;
+      gap: 4px 8px;
+    }
+
+    /* Modal fullscreen */
+    .modal {
+      width: 100%;
+      max-width: 100%;
+      height: 100%;
+      max-height: 100%;
+      border-radius: 0;
+    }
+
+    .modal-overlay {
+      padding: 0;
+    }
+
+    /* Forms */
     .form-row { grid-template-columns: 1fr; }
     .data-grid { grid-template-columns: 1fr; }
     .cashflow-summary { grid-template-columns: 1fr; }
+
+    /* Charts container */
+    .section > div[style*="height:220px"],
+    .section > div[style*="height:240px"] {
+      height: 180px !important;
+    }
+
+    /* Toast */
+    .toast-container {
+      bottom: 74px;
+      right: 12px;
+      left: 12px;
+    }
+
+    .toast {
+      min-width: auto;
+      font-size: 12px;
+    }
   }
+
+  /* Hide mobile nav on desktop */
+  .mobile-nav { display: none; }
 </style>
 </head>
 <body>
@@ -1256,6 +1509,27 @@
   </div>
 </div>
 
+<div class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-item active" data-view="overview" onclick="setView('overview')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span>Geral</span>
+  </button>
+  <button class="mobile-nav-item" data-view="inadimplencia" onclick="setView('inadimplencia')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>
+    <span>Receber</span>
+    <span class="mobile-nav-badge" id="mob-badge-inad" style="display:none">0</span>
+  </button>
+  <button class="mobile-nav-item" data-view="aprovacoes" onclick="setView('aprovacoes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    <span>Aprovar</span>
+    <span class="mobile-nav-badge" id="mob-badge-aprov" style="display:none">0</span>
+  </button>
+  <button class="mobile-nav-item" data-view="dados" onclick="setView('dados')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+    <span>Dados</span>
+  </button>
+</div>
+
 <div class="toast-container" id="toast-container"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -1608,8 +1882,14 @@ function setView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
   document.getElementById('view-title').textContent = VIEW_TITLES[view];
 
+  // Mobile nav sync
+  document.querySelectorAll('.mobile-nav-item').forEach(i => i.classList.toggle('active', i.dataset.view === view));
+
   const addBtn = document.getElementById('add-button');
   addBtn.style.display = view === 'overview' || view === 'dados' ? 'none' : 'inline-flex';
+
+  // Scroll to top on view change (mobile UX)
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 
   renderAll();
 }
@@ -2756,7 +3036,7 @@ function clearAllData() {
 
 // ============= RENDER ALL =============
 function renderAll() {
-  // badges
+  // badges sidebar
   const inadCount = state.inadimplencia.filter(b=>b.status!=='pago' && b.status!=='excluido').length;
   const pendentes = state.aprovacoes.filter(a=>a.status==='pendente');
   const aprovCount = calcAprovacoesCount(pendentes);
@@ -2764,6 +3044,12 @@ function renderAll() {
   document.getElementById('badge-inad').style.display = inadCount ? 'inline-block' : 'none';
   document.getElementById('badge-aprov').textContent = aprovCount;
   document.getElementById('badge-aprov').style.display = aprovCount ? 'inline-block' : 'none';
+
+  // badges mobile
+  const mobInad = document.getElementById('mob-badge-inad');
+  const mobAprov = document.getElementById('mob-badge-aprov');
+  if (mobInad) { mobInad.textContent = inadCount; mobInad.style.display = inadCount ? 'block' : 'none'; }
+  if (mobAprov) { mobAprov.textContent = aprovCount; mobAprov.style.display = aprovCount ? 'block' : 'none'; }
 
   if (currentView === 'overview') renderOverview();
   if (currentView === 'inadimplencia') renderInadimplencia();
