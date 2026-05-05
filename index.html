@@ -82,13 +82,7 @@
     letter-spacing: -0.02em;
     line-height: 1;
   }
-.brand-logo {
-    width: 140px;
-    height: auto;
-    display: block;
-    filter: invert(1) brightness(1.05);
-    margin-bottom: 4px;
-  }
+
   .brand-sub {
     font-size: 10px;
     text-transform: uppercase;
@@ -899,7 +893,7 @@
 
 <aside>
   <div class="brand">
-    <img src="02-LOGOTIPO_HORIZONTAL cópia 37@4x-100.png.jpeg" alt="Éden Grupo" class="brand-logo">
+    <div class="brand-name">éden</div>
     <div class="brand-sub">command · executive</div>
   </div>
 
@@ -1629,7 +1623,7 @@ function renderOverview() {
   const grid = document.getElementById('kpi-grid');
   grid.innerHTML = `
     <div class="kpi kpi-danger">
-      <div class="kpi-label">Total a receber</div>
+      <div class="kpi-label">Inadimplência total</div>
       <div class="kpi-value"><span class="currency">R$</span>${fmtNum(totalInad)}</div>
       <div class="kpi-meta">${abertos.length} boletos em aberto</div>
     </div>
@@ -1807,7 +1801,11 @@ function renderOverview() {
 
   // ---- APROVAÇÕES ----
   const aprovDiv = document.getElementById('overview-approvals');
-  const visivelOverview = aprovPendentes.filter(a => !a.vinculo && !(a.transitoria && a.valor < 0));
+  const visivelOverview = aprovPendentes.filter(a => {
+    if (a.transitoria && a.valor < 0) return false; // contrapartida nunca aparece
+    if (a.vinculo && !isParentApproved(a.vinculo, aprovPendentes)) return false; // vinculado trancado
+    return true;
+  });
   visivelOverview.sort((a, b) => {
     const tA = a.transitoria && a.valor > 0 ? 0 : 1;
     const tB = b.transitoria && b.valor > 0 ? 0 : 1;
@@ -2187,13 +2185,41 @@ function getVinculados(items, parentId) {
   return items.filter(x => x.vinculo === parentId);
 }
 
+function isParentApproved(vinculoId, allItems) {
+  // Verifica se o pai (transitória) do item vinculado já foi aprovado (não existe mais nos pendentes)
+  if (!vinculoId) return true;
+  const parent = allItems.find(x => x.id === vinculoId);
+  return !parent; // se não achou nos pendentes, foi aprovado/removido
+}
+
+function getParentName(vinculoId, allItems) {
+  const parent = allItems.find(x => x.id === vinculoId);
+  return parent ? parent.titulo : 'a transferência de origem';
+}
+
 function renderApprovalCard(a, allItems) {
   const icon = getCategoryIcon(a.categoria);
   const iconHtml = `<div class="approval-icon" style="background:${icon.bg}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${icon.color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icon.svg}</svg></div>`;
 
+  // Determinar se tem ordem e se está trancado
+  const hasVinculo = !!a.vinculo;
+  const isLocked = hasVinculo && !isParentApproved(a.vinculo, allItems);
+  const isTransitPos = a.transitoria && a.valor > 0;
+  const hasVinculados = isTransitPos && allItems && allItems.some(x => x.vinculo === a.id);
+
+  // Badge de ordem
+  let ordemBadge = '';
+  if (isTransitPos && hasVinculados) {
+    ordemBadge = ` <span class="badge" style="background:rgba(212,160,74,0.15);color:#D4A04A;border:1px solid rgba(212,160,74,0.3);font-size:10px">1º APROVAR</span>`;
+  } else if (hasVinculo) {
+    ordemBadge = isLocked
+      ? ` <span class="badge" style="background:rgba(138,150,138,0.12);color:#8A968A;border:1px solid rgba(138,150,138,0.25);font-size:10px">🔒 2º AGUARDANDO</span>`
+      : ` <span class="badge" style="background:rgba(111,167,72,0.12);color:#6FA748;border:1px solid rgba(111,167,72,0.25);font-size:10px">✓ 2º LIBERADO</span>`;
+  }
+
   // Se for transitória positiva, mostrar itens vinculados como detalhamento
   let detalhamento = '';
-  if (a.transitoria && a.valor > 0 && allItems) {
+  if (isTransitPos && allItems) {
     const vincs = getVinculados(allItems, a.id);
     if (vincs.length > 0) {
       detalhamento = `<div style="margin-top:10px;padding:10px 12px;background:var(--bg-elev-2);border-radius:6px;border-left:2px solid var(--eden-accent)">
@@ -2217,16 +2243,39 @@ function renderApprovalCard(a, allItems) {
     transitTag = ` <span class="badge badge-info" style="background:rgba(29,158,117,0.12);color:#1D9E75;border-color:rgba(29,158,117,0.25)">${txt}</span>`;
   }
 
-  // Valor exibido com sinal e estilo diferente pra contrapartida
+  // Valor
   let valorHtml = `<div class="approval-amount">${fmtBR(a.valor)}</div>`;
   if (a.transitoria && a.valor < 0) {
     valorHtml = `<div class="approval-amount" style="color:var(--text-faint);font-size:14px;font-style:italic">${fmtBR(a.valor)}<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-top:2px">não soma ao total</div></div>`;
   }
 
-  return `<div class="approval-card">
+  // Botões: se trancado, botão de aprovar chama bloqueio
+  const approveOnclick = isLocked
+    ? `blockedApproval('${a.vinculo}')`
+    : `decideAprov('${a.id}','aprovado')`;
+  const rejectOnclick = isLocked
+    ? `blockedApproval('${a.vinculo}')`
+    : `decideAprov('${a.id}','rejeitado')`;
+
+  const lockOverlay = isLocked
+    ? `opacity:0.5;pointer-events:auto;`
+    : '';
+  const lockCardStyle = isLocked
+    ? `border-left:3px solid var(--text-faint);opacity:0.65;`
+    : '';
+
+  const approveBtn = isLocked
+    ? `<button class="btn btn-sm" style="background:rgba(138,150,138,0.1);color:var(--text-muted);border-color:rgba(138,150,138,0.2);cursor:not-allowed" onclick="${approveOnclick}">🔒 Aprovar</button>`
+    : `<button class="btn btn-sm" style="background:rgba(111,167,72,0.15);color:var(--success);border-color:rgba(111,167,72,0.3)" onclick="${approveOnclick}">Aprovar</button>`;
+
+  const rejectBtn = isLocked
+    ? `<button class="btn btn-sm" style="background:rgba(138,150,138,0.05);color:var(--text-muted);border-color:rgba(138,150,138,0.15);cursor:not-allowed" onclick="${rejectOnclick}">🔒 Rejeitar</button>`
+    : `<button class="btn btn-sm btn-danger" onclick="${rejectOnclick}">Rejeitar</button>`;
+
+  return `<div class="approval-card" style="${lockCardStyle}">
     ${iconHtml}
     <div class="approval-content">
-      <h4>${a.titulo}${transitTag}</h4>
+      <h4>${a.titulo}${transitTag}${ordemBadge}</h4>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${a.descricao || ''}</div>
       <div class="approval-meta">
         <span><strong style="color:var(--text-secondary)">${a.solicitante}</strong></span>
@@ -2240,8 +2289,8 @@ function renderApprovalCard(a, allItems) {
     <div style="text-align:right">
       ${valorHtml}
       <div class="approval-actions" style="margin-top:8px;justify-content:flex-end">
-        <button class="btn btn-sm" style="background:rgba(111,167,72,0.15);color:var(--success);border-color:rgba(111,167,72,0.3)" onclick="decideAprov('${a.id}','aprovado')">Aprovar</button>
-        <button class="btn btn-sm btn-danger" onclick="decideAprov('${a.id}','rejeitado')">Rejeitar</button>
+        ${approveBtn}
+        ${rejectBtn}
         <button class="icon-btn" title="Editar" onclick="editItem('aprovacoes','${a.id}')">✎</button>
         <button class="icon-btn danger" title="Excluir definitivamente" onclick="hardDeleteAprov('${a.id}')">✕</button>
       </div>
@@ -2249,14 +2298,29 @@ function renderApprovalCard(a, allItems) {
   </div>`;
 }
 
+function blockedApproval(parentId) {
+  const parent = state.aprovacoes.find(x => x.id === parentId);
+  const nome = parent ? parent.titulo : 'a transferência de origem';
+  toast(`⚠️ Ordem de pagamento: aprove primeiro "${nome}"`, 'warning');
+}
+
 function renderAprovacoes() {
   const pendentes = state.aprovacoes.filter(a => a.status === 'pendente');
-  // Ordem: transitórias positivas primeiro, depois itens normais. Vinculados não aparecem solo.
-  const visiveis = pendentes.filter(a => !a.vinculo);
+  // Ordem: transitórias positivas → itens soltos (sem vínculo, sem transitória) → vinculados → contrapartidas
+  // Contrapartidas negativas não aparecem solo
+  const visiveis = pendentes.filter(a => !(a.transitoria && a.valor < 0));
   visiveis.sort((a, b) => {
-    const tA = a.transitoria && a.valor > 0 ? 0 : (a.transitoria ? 2 : 1);
-    const tB = b.transitoria && b.valor > 0 ? 0 : (b.transitoria ? 2 : 1);
-    return tA - tB;
+    const ordem = item => {
+      if (item.transitoria && item.valor > 0) return 0; // transitória positiva primeiro
+      if (!item.vinculo && !item.transitoria) return 1; // itens soltos
+      if (item.vinculo) return 2; // vinculados por último
+      return 3;
+    };
+    const diff = ordem(a) - ordem(b);
+    if (diff !== 0) return diff;
+    // Dentro de vinculados, agrupar pelo mesmo pai
+    if (a.vinculo && b.vinculo) return a.vinculo.localeCompare(b.vinculo);
+    return 0;
   });
 
   const list = document.getElementById('aprovacoes-list');
@@ -2364,18 +2428,25 @@ function decideAprov(id, decisao) {
   const a = state.aprovacoes.find(x => x.id === id);
   if (!a) return;
 
-  // Lista de itens a decidir: o item + sua contrapartida (se transitória) + seus vinculados
+  // Verificação de ordem: se tem vínculo e pai ainda tá pendente, bloqueia
+  if (a.vinculo) {
+    const parent = state.aprovacoes.find(x => x.id === a.vinculo && x.status === 'pendente');
+    if (parent) {
+      toast(`⚠️ Ordem de pagamento: aprove primeiro "${parent.titulo}"`, 'warning');
+      return;
+    }
+  }
+
+  // Grupo a decidir
   const grupo = [a];
 
+  // Se transitória positiva, arrastar só a contrapartida (NÃO os vinculados — eles ficam pra decisão individual)
   if (a.transitoria && a.valor > 0) {
-    // Adicionar contrapartida (transitória negativa com mesmo valor absoluto e mesma data)
     const contrapartida = state.aprovacoes.find(x =>
       x.transitoria && x.valor < 0 &&
       Math.abs(x.valor + a.valor) < 0.01 && x.data === a.data && x.id !== a.id
     );
     if (contrapartida) grupo.push(contrapartida);
-    // Adicionar vinculados
-    state.aprovacoes.filter(x => x.vinculo === a.id).forEach(x => grupo.push(x));
   }
 
   grupo.forEach(item => {
@@ -2394,8 +2465,12 @@ function decideAprov(id, decisao) {
   state.aprovacoes = state.aprovacoes.filter(x => !ids.includes(x.id));
   save();
 
-  if (grupo.length > 1) {
-    toast(`${a.titulo} + ${grupo.length-1} item(ns) — ${decisao}`, decisao === 'aprovado' ? 'success' : 'warning');
+  // Toast com indicação de próximo passo se tinha vinculados
+  const vinculados = state.aprovacoes.filter(x => x.vinculo === a.id && x.status === 'pendente');
+  if (vinculados.length > 0 && decisao === 'aprovado') {
+    toast(`${a.titulo} — aprovada ✓ Agora aprove os ${vinculados.length} pagamento(s) liberados`, 'success');
+  } else if (grupo.length > 1) {
+    toast(`${a.titulo} + contrapartida — ${decisao}`, decisao === 'aprovado' ? 'success' : 'warning');
   } else {
     toast(`${a.titulo} — ${decisao}`, decisao === 'aprovado' ? 'success' : 'warning');
   }
