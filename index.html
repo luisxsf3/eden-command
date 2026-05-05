@@ -91,6 +91,9 @@
     mix-blend-mode: screen;
     margin-bottom: 4px;
   }
+  .topbar-logo {
+    display: none;
+  }
 
   .brand-sub {
     font-size: 10px;
@@ -971,6 +974,14 @@
     }
 
     /* ---- Topbar ---- */
+    .topbar-logo {
+      display: block;
+      width: 100px;
+      height: auto;
+      filter: invert(1) brightness(1.2);
+      mix-blend-mode: screen;
+      margin-bottom: 2px;
+    }
     .topbar {
       padding: 12px 16px;
       flex-wrap: wrap;
@@ -1253,6 +1264,7 @@
 <main>
   <div class="topbar">
     <div class="topbar-title">
+      <img src="eden-logo.jpg" alt="Éden Grupo" class="topbar-logo">
       <h1 id="view-title">Visão Geral</h1>
       <span class="topbar-date" id="current-date"></span>
     </div>
