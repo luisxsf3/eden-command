@@ -1715,11 +1715,18 @@ function calcMora(valor, diasAtraso) {
 const uid = (prefix = 'x') => prefix + Math.random().toString(36).substr(2, 6);
 
 // ============= STORAGE =============
+// Flag global pra coordenar saves locais com auto-refresh
+let pendingCloudSave = false;
+let lastSyncOpAt = 0;
+
 function save() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     document.getElementById('last-saved').textContent = 'Editado às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
-    if (syncUrl) scheduleSync();
+    if (syncUrl) {
+      pendingCloudSave = true;
+      scheduleSync();
+    }
   } catch(e) {
     toast('Erro ao salvar localmente', 'danger');
   }
@@ -1802,12 +1809,23 @@ function setSyncStatus(status) {
 
 async function loadFromCloud() {
   if (!syncUrl) return false;
+  // Proteção: nunca sobrescrever state local se tem mudança não sincronizada
+  if (pendingCloudSave) {
+    console.warn('loadFromCloud abortado — alteração local pendente');
+    return false;
+  }
+  lastSyncOpAt = Date.now();
   try {
     const url = syncUrl + (syncToken ? '?token=' + encodeURIComponent(syncToken) : '');
     const res = await fetch(url, { method: 'GET', redirect: 'follow' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
+    // Re-checa flag depois do fetch (pode ter mudado durante a request)
+    if (pendingCloudSave) {
+      console.warn('loadFromCloud descartado pós-fetch — alteração local pendente');
+      return false;
+    }
     ['inadimplencia','caixa','aprovacoes','historico'].forEach(k => {
       if (Array.isArray(data[k])) {
         state[k] = data[k].map(item => normalizeItem(item));
@@ -1861,33 +1879,44 @@ function normalizeItem(item) {
   return out;
 }
 
-async function saveToCloud() {
+async function saveToCloud(retries = 2) {
   if (!syncUrl) return false;
-  try {
-    setSyncStatus('syncing');
-    const payload = { token: syncToken, data: state };
-    const res = await fetch(syncUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
-      redirect: 'follow'
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    lastSyncAt = new Date();
-    setSyncStatus('online');
-    return true;
-  } catch (e) {
-    console.error('Save cloud error', e);
-    setSyncStatus('offline');
-    return false;
+  setSyncStatus('syncing');
+  lastSyncOpAt = Date.now();
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const payload = { token: syncToken, data: state };
+      const res = await fetch(syncUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        redirect: 'follow'
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      lastSyncAt = new Date();
+      pendingCloudSave = false; // sucesso — pode liberar refresh
+      setSyncStatus('online');
+      return true;
+    } catch (e) {
+      console.error(`Save cloud attempt ${attempt + 1} failed:`, e);
+      if (attempt < retries) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); // backoff: 1s, 2s
+      }
+    }
   }
+  // Todas tentativas falharam
+  setSyncStatus('offline');
+  toast('Erro ao salvar — alteração só local. Tentarei novamente.', 'danger');
+  return false;
 }
 
 function scheduleSync() {
   if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => saveToCloud(), 800);
+  // Reduzido para 300ms — mais responsivo, mais rápido pra "trancar" o estado
+  syncTimer = setTimeout(() => saveToCloud(), 300);
 }
 
 async function syncNow() {
@@ -3282,16 +3311,23 @@ async function init() {
 
   setView('overview');
 
-  // auto-refresh do cloud a cada 60s
+  // Auto-refresh do cloud — só puxa se não tem nada local pra subir.
+  // Janela maior (3 min) reduz chance de race com edições.
   setInterval(async () => {
-    if (!syncUrl || syncStatus === 'syncing') return;
+    if (!syncUrl) return;
+    if (syncStatus === 'syncing') return;
+    if (pendingCloudSave) return; // tem mudança local não sincronizada → não puxa
+
+    // Se um save acabou de rodar, espera mais um pouco
+    if (Date.now() - lastSyncOpAt < 5000) return;
+
     const ok = await loadFromCloud();
     if (ok) {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
       setSyncStatus('online');
       renderAll();
     }
-  }, 60000);
+  }, 180000); // 3 minutos
 }
 
 document.getElementById('modal').addEventListener('click', e => {
