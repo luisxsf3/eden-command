@@ -1853,9 +1853,11 @@ function normalizeItem(item) {
   if (out.vinculo === '' || out.vinculo === null) delete out.vinculo;
   if (typeof out.vinculo === 'string') out.vinculo = out.vinculo.trim() || undefined;
   // limpar campos string trim
-  ['id','cliente','unidade','status','descricao','categoria','solicitante','titulo','tipo','data','vencimento','decisao'].forEach(f => {
+  ['id','cliente','unidade','status','descricao','categoria','solicitante','titulo','tipo','data','vencimento','decisao','data_pagamento'].forEach(f => {
     if (typeof out[f] === 'string') out[f] = out[f].trim();
   });
+  // data_pagamento vazia vira undefined
+  if (out.data_pagamento === '' || out.data_pagamento === null) delete out.data_pagamento;
   return out;
 }
 
@@ -2317,7 +2319,14 @@ function renderInadimplencia() {
     const mora = calcMora(b.valor, diasMora);
     const isOpen = isOpenStatus(b);
     let statusBadge, statusText;
-    if (b.status === 'pago') { statusBadge = 'badge-success'; statusText = 'recebido'; }
+    if (b.status === 'pago') {
+      if (b.data_pagamento && daysBetween(b.vencimento, b.data_pagamento) > 0) {
+        const diasAtraso = daysBetween(b.vencimento, b.data_pagamento);
+        statusBadge = 'badge-warning'; statusText = `recebido +${diasAtraso}d`;
+      } else {
+        statusBadge = 'badge-success'; statusText = 'recebido em dia';
+      }
+    }
     else if (b.status === 'excluido') { statusBadge = 'badge-neutral'; statusText = 'excluído'; }
     else if (b.dias > 30) { statusBadge = 'badge-danger'; statusText = `${b.dias}d atraso`; }
     else if (b.dias > 0) { statusBadge = 'badge-warning'; statusText = `${b.dias}d atraso`; }
@@ -2338,10 +2347,15 @@ function renderInadimplencia() {
       actions = `<button class="icon-btn" title="Reabrir" onclick="reopenInad('${b.id}')">↩</button>`;
     }
 
+    // Data de pagamento pra exibição
+    const vencCell = b.status === 'pago' && b.data_pagamento
+      ? `${fmtDate(b.vencimento)}<div style="font-size:10px;color:var(--text-muted);margin-top:2px">pago ${fmtDate(b.data_pagamento)}</div>`
+      : fmtDate(b.vencimento);
+
     return `<tr>
       <td class="cell-bold">${b.cliente}</td>
       <td><span class="unit-tag">${b.unidade}</span></td>
-      <td class="cell-muted">${fmtDate(b.vencimento)}</td>
+      <td class="cell-muted">${vencCell}</td>
       <td class="num">${diasCell}</td>
       <td class="num cell-muted">${fmtBR(b.valor)}</td>
       <td class="num cell-bold">${fmtBR(mora.atualizado)}</td>
@@ -2750,12 +2764,74 @@ function renderDados() {
 // ============= ACTIONS =============
 function markPaid(id) {
   const b = state.inadimplencia.find(x => x.id === id);
-  if (b) {
-    b.status = 'pago';
-    save();
-    toast(`Boleto de ${b.cliente} marcado como pago`);
-    renderAll();
+  if (!b) return;
+
+  editingId = id;
+  editingType = '__confirmar_pagamento__';
+  document.getElementById('modal-title').textContent = 'Confirmar recebimento';
+
+  const hintId = 'pay-date-hint';
+  document.getElementById('modal-body').innerHTML = `
+    <div style="margin-bottom:16px">
+      <div style="font-size:14px;font-weight:500;color:var(--text-primary)">${b.cliente}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+        <span class="unit-tag">${b.unidade}</span> · Vencimento: ${fmtDate(b.vencimento)} · ${fmtBR(b.valor)}
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Data do pagamento</label>
+      <input type="date" id="f-data-pagamento" value="${today()}" onchange="updatePayHint('${b.vencimento}')">
+      <div id="${hintId}" style="font-size:11px;margin-top:6px;font-weight:500"></div>
+    </div>
+  `;
+
+  // Footer custom com botão "Confirmar" verde
+  document.querySelector('#modal .modal-footer').innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-sm" style="background:rgba(111,167,72,0.15);color:var(--success);border-color:rgba(111,167,72,0.3)" onclick="confirmPaid('${id}')">Confirmar recebimento</button>
+  `;
+
+  document.getElementById('modal').classList.add('active');
+  updatePayHint(b.vencimento);
+}
+
+function updatePayHint(vencimento) {
+  const input = document.getElementById('f-data-pagamento');
+  const hint = document.getElementById('pay-date-hint');
+  if (!input || !hint || !vencimento) return;
+
+  const dataPag = input.value;
+  if (!dataPag) { hint.textContent = ''; return; }
+
+  const dias = daysBetween(vencimento, dataPag);
+  if (dias <= 0) {
+    hint.style.color = 'var(--success)';
+    hint.innerHTML = '✓ Pagamento no prazo';
+  } else {
+    hint.style.color = 'var(--warning)';
+    hint.innerHTML = `⚠ Pagamento com ${dias} dia${dias > 1 ? 's' : ''} de atraso`;
   }
+}
+
+function confirmPaid(id) {
+  const b = state.inadimplencia.find(x => x.id === id);
+  if (!b) return;
+
+  const dataPag = document.getElementById('f-data-pagamento')?.value;
+  if (!dataPag) { toast('Informe a data do pagamento', 'warning'); return; }
+
+  b.status = 'pago';
+  b.data_pagamento = dataPag;
+  save();
+
+  const dias = daysBetween(b.vencimento, dataPag);
+  const msg = dias <= 0
+    ? `${b.cliente} — recebido em dia ✓`
+    : `${b.cliente} — recebido com ${dias}d de atraso`;
+  toast(msg, dias <= 0 ? 'success' : 'warning');
+
+  closeModal();
+  renderAll();
 }
 
 function softDeleteInad(id) {
@@ -2911,6 +2987,11 @@ function getFormHtml(type, item) {
   const unitOptions = UNITS.map(u => `<option value="${u}" ${i.unidade===u?'selected':''}>${u}</option>`).join('');
 
   if (type === 'inadimplencia') {
+    const pagField = i.status === 'pago' ? `
+      <div class="form-group">
+        <label>Data do pagamento</label>
+        <input type="date" id="f-data-pagamento" value="${i.data_pagamento || ''}">
+      </div>` : '';
     return `
       <div class="form-group">
         <label>Cliente</label>
@@ -2930,6 +3011,7 @@ function getFormHtml(type, item) {
         <label>Valor (R$)</label>
         <input type="number" id="f-valor" value="${i.valor || ''}" step="0.01" placeholder="0,00">
       </div>
+      ${pagField}
     `;
   }
 
@@ -3019,11 +3101,19 @@ function saveModal() {
 
   let item = { id };
   if (type === 'inadimplencia') {
+    const existing = state.inadimplencia.find(x => x.id === editingId);
     item.cliente = document.getElementById('f-cliente').value.trim();
     item.unidade = document.getElementById('f-unidade').value;
     item.vencimento = document.getElementById('f-vencimento').value;
     item.valor = parseFloat(document.getElementById('f-valor').value) || 0;
-    item.status = 'vencido';
+    item.status = existing ? existing.status : 'vencido';
+    // Preservar/atualizar data_pagamento
+    const dpEl = document.getElementById('f-data-pagamento');
+    if (dpEl) {
+      item.data_pagamento = dpEl.value || '';
+    } else if (existing && existing.data_pagamento) {
+      item.data_pagamento = existing.data_pagamento;
+    }
     if (!item.cliente || !item.valor) { toast('Preencha cliente e valor', 'danger'); return; }
   } else if (type === 'caixa') {
     item.descricao = document.getElementById('f-descricao').value.trim();
@@ -3059,6 +3149,11 @@ function saveModal() {
 
 function closeModal() {
   document.getElementById('modal').classList.remove('active');
+  // Restaurar footer padrão
+  document.querySelector('#modal .modal-footer').innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary btn-sm" onclick="saveModal()">Salvar</button>
+  `;
   editingId = null;
   editingType = null;
 }
