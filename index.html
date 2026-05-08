@@ -314,7 +314,6 @@
     <div id="last-saved">—</div>
     <div class="footer-user">
       <div class="footer-user-name" id="footer-user-name">—</div>
-      <div class="footer-user-role" id="footer-user-role">—</div>
     </div>
   </div>
 </aside>
@@ -514,7 +513,7 @@ function applyUserAccess(role) {
   };
   const u = USERS[role] || { name: role, role: '' };
   document.getElementById('footer-user-name').textContent = u.name;
-  document.getElementById('footer-user-role').textContent = u.role + ' · Éden Command';
+  document.getElementById('footer-user-name').textContent = u.name + ' / ' + u.role;
 
   // Card de links só pra Luis
   const linksCard = document.getElementById('token-links-card');
@@ -1082,7 +1081,7 @@ function downloadGesTemplate() {
 async function init(){
   document.getElementById('sync-url-input').value=syncUrl;
   document.getElementById('sync-token-input').value=syncToken;
-  setSyncStatus(syncUrl?'syncing':'idle');
+  setSyncStatus(syncUrl?'syncing':'online');
 
   const role=await load();
   if(role===null)return; // access denied — para aqui
