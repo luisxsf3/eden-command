@@ -740,7 +740,10 @@ function setSyncStatus(status){
   const m=map[status]||map.idle;
   const s=(id,v,p)=>{const el=document.getElementById(id);if(el)el[p]=v;};
   const dot=document.getElementById('sync-dot');if(dot){dot.style.background=m.color;dot.style.boxShadow='0 0 8px '+m.color;}
-  s('sync-label','textContent',m.text);s('sync-icon','textContent',m.icon);s('sync-btn-label','textContent',m.btn);s('sync-status-text','textContent',m.text.toLowerCase());
+  const sl=document.getElementById('sync-label');if(sl)sl.textContent=m.text;
+const si=document.getElementById('sync-icon');if(si)si.textContent=m.icon;
+const sb=document.getElementById('sync-btn-label');if(sb)sb.textContent=m.btn;
+const ss=document.getElementById('sync-status-text');if(ss)ss.textContent=m.text.toLowerCase();
   const mobDot=document.getElementById('topbar-sync-dot'),mobTxt=document.getElementById('topbar-sync-text'),mobWrap=document.getElementById('topbar-sync-mobile');
   if(mobDot){mobDot.style.background=m.color;mobDot.style.boxShadow='0 0 6px '+m.color;}
   if(mobTxt)mobTxt.textContent=m.mob;if(mobWrap)mobWrap.style.color=m.color;
