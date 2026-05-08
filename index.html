@@ -509,7 +509,7 @@ function showAccessDenied() {
 function applyUserAccess(role) {
   currentRole = role;
   const USERS = {
-    luis: { name: 'Luis Eduardo', role: 'COO' },
+    luis: { name: 'Luis Eduardo', role: 'CO' },
     vini: { name: 'Vinicius',     role: 'Gestão' }
   };
   const u = USERS[role] || { name: role, role: '' };
@@ -737,7 +737,7 @@ async function load(){
 // ===== CLOUD SYNC =====
 function setSyncStatus(status){
   syncStatus=status;
-  const map={idle:{color:'var(--text-faint)',text:'Sem sincronização',icon:'↻',btn:'Sincronizar',mob:'Desconectado'},syncing:{color:'var(--warning)',text:'Sincronizando…',icon:'⟳',btn:'Sincronizando…',mob:'Sincronizando…'},online:{color:'var(--success)',text:'Sincronizado',icon:'✓',btn:'Sincronizar',mob:'Sincronizado'},offline:{color:'var(--danger)',text:'Offline (só local)',icon:'⚠',btn:'Tentar de novo',mob:'Offline'},error:{color:'var(--danger)',text:'Erro de sincronia',icon:'!',btn:'Tentar de novo',mob:'Erro'}};
+  const map={idle:{color:'var(--success)',text:'Local',icon:'✓',btn:'Sincronizar',mob:'Local'},syncing:{color:'var(--warning)',text:'Sincronizando…',icon:'⟳',btn:'Sincronizando…',mob:'Sincronizando…'},online:{color:'var(--success)',text:'Sincronizado',icon:'✓',btn:'Sincronizar',mob:'Sincronizado'},offline:{color:'var(--danger)',text:'Offline (só local)',icon:'⚠',btn:'Tentar de novo',mob:'Offline'},error:{color:'var(--danger)',text:'Erro de sincronia',icon:'!',btn:'Tentar de novo',mob:'Erro'}};
   const m=map[status]||map.idle;
   const s=(id,v,p)=>{const el=document.getElementById(id);if(el)el[p]=v;};
   const dot=document.getElementById('sync-dot');if(dot){dot.style.background=m.color;dot.style.boxShadow='0 0 8px '+m.color;}
