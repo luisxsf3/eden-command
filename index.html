@@ -466,6 +466,97 @@ function showAccessDenied() {
 }
 
 function applyUserAccess(role) {
+
+  if (!syncUrl) {
+    toast('Apps Script não configurado', 'danger');
+    return;
+  }
+  async function loadCloudData() {
+
+  if (!syncUrl) {
+    toast('Apps Script não configurado', 'danger');
+    return;
+  }
+
+  try {
+
+    setSyncStatus('syncing');
+
+    const res = await fetch(
+      syncUrl + '?token=' + encodeURIComponent(URL_TOKEN)
+    );
+
+    const json = await res.json();
+
+    if (json.error) {
+      showAccessDenied();
+      return;
+    }
+
+    currentRole = json.role;
+
+    applyUserAccess(currentRole);
+
+    state = json.data || {};
+
+    setSyncStatus('connected');
+
+    lastSyncAt = new Date();
+
+    updateSyncUI();
+
+    renderAll();
+
+  } catch (err) {
+
+    console.error(err);
+
+    setSyncStatus('error');
+
+    toast('Erro ao conectar com Google Sheets', 'danger');
+
+  }
+}
+
+  try {
+
+    setSyncStatus('syncing');
+
+    const res = await fetch(
+      syncUrl + '?token=' + encodeURIComponent(URL_TOKEN)
+    );
+
+    const json = await res.json();
+
+    if (json.error) {
+      showAccessDenied();
+      return;
+    }
+
+    currentRole = json.role;
+
+    applyUserAccess(currentRole);
+
+    state = json.data || {};
+
+    setSyncStatus('connected');
+
+    lastSyncAt = new Date();
+
+    updateSyncUI();
+
+    renderAll();
+
+  } catch (err) {
+
+    console.error(err);
+
+    setSyncStatus('error');
+
+    toast('Erro ao conectar com Google Sheets', 'danger');
+
+  }
+}
   currentRole = role;
   const USERS = {
     luis: { name: 'Luis Eduardo', role: 'COO' },
@@ -500,12 +591,12 @@ const SYNC_URL_KEY = 'eden_command_sync_url';
 const SYNC_TOKEN_KEY = 'eden_command_sync_token';
 const UNITS = ['Plenitude', 'Edificação'];
 
-let state = { inadimplencia:[], caixa:[], aprovacoes:[], historico:[] };
+let state = {};
 let currentView = 'overview';
 let currentSpace = localStorage.getItem('eden_space') || 'financeiro';
 let editingId = null, editingType = null;
-let syncUrl = localStorage.getItem(SYNC_URL_KEY) || '';
-let syncToken = localStorage.getItem(SYNC_TOKEN_KEY) || '';
+let syncUrl = 'https://script.google.com/macros/s/AKfycbzZU_na5lJw9evKeUve69_d3aIc-DbQh-lcYe8Edj8olWJEunHn8NNWef_SmEPpEJgb/exec';
+let syncToken = URL_TOKEN;
 let syncStatus = 'idle', syncTimer = null, lastSyncAt = null;
 let pendingCloudSave = false, lastSyncOpAt = 0;
 
@@ -673,16 +764,71 @@ function setSyncStatus(status){
 function normalizeItem(item){const out={...item};if(out.valor!==undefined&&out.valor!==null&&out.valor!==''){if(typeof out.valor==='string'){out.valor=parseFloat(out.valor.replace(/[R$\s.]/g,'').replace(',','.'))||0;}else{out.valor=parseFloat(out.valor)||0;}}else{out.valor=0;}if(out.transitoria!==undefined){const v=out.transitoria;if(typeof v==='boolean')out.transitoria=v;else if(typeof v==='string'){const s=v.trim().toLowerCase();out.transitoria=(s==='true'||s==='sim'||s==='1'||s==='verdadeiro');}else if(typeof v==='number')out.transitoria=v===1;else out.transitoria=false;}if(out.vinculo===''||out.vinculo===null)delete out.vinculo;if(typeof out.vinculo==='string')out.vinculo=out.vinculo.trim()||undefined;['id','cliente','unidade','status','descricao','categoria','solicitante','titulo','tipo','data','vencimento','decisao','data_pagamento'].forEach(f=>{if(typeof out[f]==='string')out[f]=out[f].trim();});if(out.data_pagamento===''||out.data_pagamento===null)delete out.data_pagamento;return out;}
 
 async function loadFromCloud(){
-  if(!syncUrl||pendingCloudSave)return false;
-  lastSyncOpAt=Date.now();
-  try{const url=syncUrl+'?token='+encodeURIComponent(URL_TOKEN);const res=await fetch(url,{method:'GET',redirect:'follow'});if(!res.ok)throw new Error('HTTP '+res.status);const data=await res.json();if(data.error)throw new Error(data.error);if(pendingCloudSave)return false;['inadimplencia','caixa','aprovacoes','historico'].forEach(k=>{if(Array.isArray(data[k]))state[k]=data[k].map(item=>normalizeItem(item));});lastSyncAt=new Date();return true;}catch(e){console.error('Load cloud error',e);return false;}
+
+  if(!syncUrl || pendingCloudSave) return false;
+
+  lastSyncOpAt = Date.now();
+
+  try{
+
+    const url = syncUrl + '?token=' + encodeURIComponent(URL_TOKEN);
+
+    const res = await fetch(url,{
+      method:'GET',
+      redirect:'follow'
+    });
+
+    if(!res.ok) throw new Error('HTTP '+res.status);
+
+    const response = await res.json();
+
+    if(response.error === 'unauthorized'){
+      showAccessDenied();
+      return false;
+    }
+
+    if(response.error){
+      throw new Error(response.error);
+    }
+
+    if(response.role){
+      currentRole = response.role;
+      applyUserAccess(currentRole);
+    }
+
+    const data = response.data || response;
+
+    if(pendingCloudSave) return false;
+
+    ['inadimplencia','caixa','aprovacoes','historico']
+    .forEach(k=>{
+
+      if(Array.isArray(data[k])){
+
+        state[k] = data[k].map(item=>normalizeItem(item));
+
+      }
+
+    });
+
+    lastSyncAt = new Date();
+
+    return true;
+
+  }catch(e){
+
+    console.error('Load cloud error',e);
+
+    return false;
+
+  }
 }
 
 async function saveToCloud(retries=2){
   if(!syncUrl)return false;
   setSyncStatus('syncing');lastSyncOpAt=Date.now();
   for(let attempt=0;attempt<=retries;attempt++){
-    try{const payload={token:syncToken,data:state};const res=await fetch(syncUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),redirect:'follow'});if(!res.ok)throw new Error('HTTP '+res.status);const data=await res.json();if(data.error)throw new Error(data.error);lastSyncAt=new Date();pendingCloudSave=false;setSyncStatus('online');return true;}
+    try{const payload={token:URL_TOKEN,data:state};const res=await fetch(syncUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),redirect:'follow'});if(!res.ok)throw new Error('HTTP '+res.status);const data=await res.json();if(data.error)throw new Error(data.error);lastSyncAt=new Date();pendingCloudSave=false;setSyncStatus('online');return true;}
     catch(e){console.error(`Save attempt ${attempt+1} failed:`,e);if(attempt<retries)await new Promise(r=>setTimeout(r,1000*(attempt+1)));}
   }
   setSyncStatus('offline');toast('Erro ao salvar — alteração só local.','danger');return false;
@@ -911,15 +1057,38 @@ async function init(){
   document.getElementById('sync-token-input').value=syncToken;
   setSyncStatus(syncUrl?'syncing':'idle');
 
-  const role=await load();
-  if(role===null)return; // access denied — para aqui
+ const ok = await loadFromCloud();
 
-  document.getElementById('current-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-  document.querySelectorAll('.section > table').forEach(tbl=>{const wrapper=document.createElement('div');wrapper.className='table-scroll';tbl.parentNode.insertBefore(wrapper,tbl);wrapper.appendChild(tbl);});
+if(!ok){
+  showAccessDenied();
+  return;
+}
 
-  applyUserAccess(role);
-  renderAll();
+document.getElementById('current-date').textContent =
+new Date().toLocaleDateString(
+  'pt-BR',
+  {
+    weekday:'long',
+    day:'2-digit',
+    month:'long',
+    year:'numeric'
+  }
+);
 
+document.querySelectorAll('.section > table')
+.forEach(tbl=>{
+
+  const wrapper=document.createElement('div');
+
+  wrapper.className='table-scroll';
+
+  tbl.parentNode.insertBefore(wrapper,tbl);
+
+  wrapper.appendChild(tbl);
+
+});
+
+renderAll();
   setInterval(async()=>{
     if(!syncUrl||syncStatus==='syncing'||pendingCloudSave)return;
     if(Date.now()-lastSyncOpAt<5000)return;
