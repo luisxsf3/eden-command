@@ -300,15 +300,14 @@
       <div class="nav-item" data-view="inadimplencia"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h2"/></svg></span><span>Contas a Receber</span><span class="nav-badge" id="badge-inad">0</span></div>
       <div class="nav-item" data-view="aprovacoes"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span><span>Aprovações</span><span class="nav-badge" id="badge-aprov">0</span></div>
       <div class="nav-section">Sistema</div>
-      <div class="nav-item" data-view="dados"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span><span>Dados</span></div>
-    </div>
-    <div id="nav-ges-items" style="display:none">
       <div class="nav-section">Operação</div>
       <div class="nav-item" data-view="ges-overview"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span><span>Visão Geral</span></div>
-      <div class="nav-item" data-view="ges-carteira"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span><span>Carteira de Lojas</span></div>
-      <div class="nav-item" data-view="ges-dados"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span><span>Dados</span></div>
+      <div class="nav-item" data-view="ges-carteira"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span><span>Carteira de Lojas</span></div
     </div>
   </nav>
+  <div style="padding:0 12px;border-top:1px solid var(--border-soft);padding-top:8px;margin-top:auto">
+  <div class="nav-item" data-view="dados" id="nav-dados-bottom"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span><span>Dados</span></div>
+</div>
   <div class="sidebar-footer">
     <div class="footer-status"><span class="status-dot" id="sync-dot"></span><span id="sync-label">Aguardando…</span></div>
     <div id="last-saved">—</div>
@@ -785,6 +784,8 @@ function switchSpace(space){
   const spEl=document.getElementById(space==='financeiro'?'sp-fin':'sp-ges');if(spEl)spEl.classList.add('active');
   document.getElementById('nav-fin-items').style.display=space==='financeiro'?'block':'none';
   document.getElementById('nav-ges-items').style.display=space==='gestao'?'block':'none';
+  const dFin=document.querySelector('[data-view="dados"]');if(dFin)dFin.style.display=space==='financeiro'?'flex':'none';
+const dGes=document.querySelector('[data-view="ges-dados"]');if(dGes)dGes.style.display=space==='gestao'?'flex':'none';
   const gesBadge=document.getElementById('topbar-ges-badge');if(gesBadge)gesBadge.style.display=space==='gestao'?'flex':'none';
   ['mob-fin-geral','mob-fin-receber','mob-fin-aprovar','mob-fin-dados'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=space==='financeiro'?'flex':'none';});
   ['mob-ges-geral','mob-ges-carteira','mob-ges-dados'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=space==='gestao'?'flex':'none';});
