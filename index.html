@@ -272,7 +272,8 @@
   .badge-batepreco  { background: rgba(212,160,74,.12); color: var(--warning); border: 1px solid rgba(212,160,74,.2); }
   .badge-dolado     { background: rgba(88,148,196,.12); color: var(--info);    border: 1px solid rgba(88,148,196,.2); }
 
-  /* ====== SCROLLBAR ====== */
+  .ges-nome-link:hover { border-bottom-color: var(--eden-glow) !important; }
+  .ges-row-main:hover .ges-nome-link { border-bottom-color: rgba(111,167,72,0.6); }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: var(--bg-base); }
   ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
@@ -530,7 +531,7 @@
       </div>
       <div class="table-scroll">
         <table>
-          <thead><tr><th style="width:32px"></th><th>Loja</th><th>Bandeira</th><th class="num">Fat. Médio</th><th class="num">CMV</th><th class="num">Ticket</th><th class="num">Clientes/mês</th></tr></thead>
+          <thead><tr><th>Loja</th><th>Bandeira</th><th class="num">Fat. Médio</th><th class="num">CMV</th><th class="num">Ticket</th><th class="num">Clientes/mês</th></tr></thead>
           <tbody id="ges-cart-tbody"></tbody>
         </table>
       </div>
@@ -720,16 +721,15 @@ function renderGesCarteira() {
     const isOpen = gesOpenRow===l.nome;
     const af=gesAvg(l.fat), ac=gesAvg(l.cmv), at=gesAvg(l.tkt), acl=gesAvg(l.cli);
     const nom = l.nome.replace(/'/g,"\\'");
-    const mainRow = `<tr class="ges-row-main ${isOpen?'open':''}" onclick="gesToogleRow('${nom}')">
-      <td style="width:32px"><span class="arrow-btn ${isOpen?'open':''}">▶</span></td>
-      <td><span class="cell-bold">${l.nome}</span><div style="font-size:10px;color:var(--text-faint);margin-top:1px">${l.c}, ${l.uf}</div></td>
+    const mainRow = `<tr class="ges-row-main ${isOpen?'open':''}" onclick="gesToogleRow('${nom}')" style="cursor:pointer">
+      <td><span class="ges-nome-link" style="color:var(--text-primary);font-weight:500;border-bottom:1px solid ${isOpen?'var(--eden-glow)':'rgba(111,167,72,0.25)'};transition:border-color .15s;padding-bottom:1px">${l.nome}</span><div style="font-size:10px;color:var(--text-faint);margin-top:2px">${l.c}, ${l.uf}</div></td>
       <td>${gesBadge(l.b)}</td>
       <td class="num cell-bold">${af?gesFmtK(af):'<span style="color:var(--text-faint)">—</span>'}</td>
       <td class="num"><span style="color:${gesCmvColor(ac)};font-weight:600;font-family:var(--font-mono)">${ac?gesFmtPct(ac):'—'}</span></td>
       <td class="num">${at?gesFmtTkt(at):'<span style="color:var(--text-faint)">—</span>'}</td>
       <td class="num">${acl?Math.round(acl).toLocaleString('pt-BR'):'<span style="color:var(--text-faint)">—</span>'}</td>
     </tr>`;
-    const detRow = isOpen ? `<tr class="ges-detail-row"><td colspan="7"><div class="ges-detail-inner">${buildGesDetail(l)}</div></td></tr>` : '';
+    const detRow = isOpen ? `<tr class="ges-detail-row"><td colspan="6"><div class="ges-detail-inner">${buildGesDetail(l)}</div></td></tr>` : '';
     return mainRow + detRow;
   }).join('');
 }
@@ -737,7 +737,7 @@ function renderGesCarteira() {
 function gesToogleRow(nome) { gesOpenRow = gesOpenRow===nome?null:nome; renderGesCarteira(); }
 
 function buildGesDetail(l) {
-  function card(title, arr, fmtFn, isCmv) {
+  function card(title, arr, fmtFn, isCmv, isAvg) {
     const valids=arr.filter(x=>x!==null); if(!valids.length) return '';
     const mx=Math.max(...valids);
     const rows=GES_MESES.map((m,i)=>{
@@ -746,14 +746,18 @@ function buildGesDetail(l) {
       if(isCmv&&v!==null) bg=gesCmvColor(v);
       return `<div class="mrow"><div class="mmonth">${m}</div><div class="mbar-track"><div class="mbar-fill" style="width:${v!==null?pct:0}%;background:${v!==null?bg:'var(--bg-elev-3)'}"></div></div><div class="mval ${v===null?'empty':''}">${v!==null?fmtFn(v):'—'}</div></div>`;
     }).join('');
-    return `<div class="metric-card"><div class="metric-card-title">${title}</div>${rows}</div>`;
+    const summaryVal = isAvg ? valids.reduce((a,b)=>a+b,0)/valids.length : valids.reduce((a,b)=>a+b,0);
+    const summaryLabel = isAvg ? 'Média' : 'Total';
+    const summaryColor = isCmv ? gesCmvColor(summaryVal) : 'var(--text-primary)';
+    const summaryRow = `<div style="border-top:1px solid var(--border-soft);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);font-weight:600">${summaryLabel}</span><span style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:${summaryColor}">${fmtFn(summaryVal)}</span></div>`;
+    return `<div class="metric-card"><div class="metric-card-title">${title}</div>${rows}${summaryRow}</div>`;
   }
   return `<div class="ges-detail-ttl">INDICADORES MENSAIS — ${l.nome.toUpperCase()} · ${l.c.toUpperCase()}, ${l.uf}</div>
   <div class="metrics-grid">
-    ${card('Faturamento (R$)',l.fat,v=>gesFmtK(v),false)}
-    ${card('CMV (%)',l.cmv,v=>gesFmtPct(v),true)}
-    ${card('Ticket Médio (R$)',l.tkt,v=>gesFmtTkt(v),false)}
-    ${card('Clientes Atendidos',l.cli,v=>v.toLocaleString('pt-BR'),false)}
+    ${card('Faturamento (R$)',l.fat,v=>gesFmtK(v),false,false)}
+    ${card('CMV (%)',l.cmv,v=>gesFmtPct(v),true,true)}
+    ${card('Ticket Médio (R$)',l.tkt,v=>gesFmtTkt(v),false,true)}
+    ${card('Clientes Atendidos',l.cli,v=>v.toLocaleString('pt-BR'),false,false)}
   </div>`;
 }
 
