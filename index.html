@@ -140,6 +140,14 @@
   .approval-meta{display:flex;gap:12px;font-size:12px;color:var(--text-muted);align-items:center;}
   .approval-amount{font-family:var(--font-mono);font-size:16px;font-weight:500;color:var(--text-primary);}
   .approval-actions{display:flex;gap:6px;}
+  .aprov-order{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:48px;padding-top:3px;}
+  .aprov-order-num{font-family:var(--font-display);font-size:24px;font-weight:400;line-height:1;color:var(--eden-glow);}
+  .aprov-order-label{font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--eden-accent);text-align:center;font-weight:600;margin-top:3px;}
+  .aprov-det{margin-top:10px;padding:10px 12px;background:var(--bg-elev-2);border-radius:6px;border-left:2px solid var(--eden-accent);}
+  .aprov-det-title{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-faint);font-weight:600;margin-bottom:7px;}
+  .aprov-det-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px;color:var(--text-secondary);}
+  .aprov-det-row span:first-child{flex:1;}
+  .aprov-det-val{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);}
   .data-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
   .data-card{background:var(--bg-elev-1);border:1px solid var(--border-soft);border-radius:10px;padding:24px;}
   .data-card h3{font-family:var(--font-display);font-size:22px;font-weight:400;margin-bottom:6px;}
@@ -351,7 +359,7 @@
 
   <!-- FINANCEIRO: APROVAÇÕES -->
   <section class="view" id="view-aprovacoes">
-    <div class="section"><div class="section-header"><h3 class="section-title">Pendentes de aprovação<span class="section-title-meta">decisão executiva</span></h3></div><div id="aprovacoes-list"></div></div>
+    <div class="section"><div class="section-header"><h3 class="section-title">Ordem de pagamento<span class="section-title-meta">pendentes</span></h3></div><div id="aprovacoes-list"></div></div>
     <div class="section"><div class="section-header"><h3 class="section-title">Histórico recente<span class="section-title-meta">últimas decisões</span></h3></div><div class="table-scroll"><table><thead><tr><th>Item</th><th>Solicitante</th><th>Decisão</th><th>Data</th><th class="num">Valor</th></tr></thead><tbody id="historico-tbody"></tbody></table></div></div>
   </section>
 
@@ -739,8 +747,8 @@ function renderOverview(){
   const upTbody=document.getElementById('upcoming-tbody');
   upTbody.innerHTML=upcoming.length===0?'<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">Nenhum vencimento próximo.</td></tr>':upcoming.map(b=>{const dias=b.dias;const status=dias>0?`<span class="badge badge-danger">${dias}d atraso</span>`:dias===0?`<span class="badge badge-warning">vence hoje</span>`:`<span class="badge badge-info">em ${-dias}d</span>`;const mora=calcMora(b.valor,Math.max(0,dias));return`<tr><td class="cell-bold">${b.cliente}</td><td><span class="unit-tag">${b.unidade}</span></td><td class="cell-muted">${fmtDate(b.vencimento)}</td><td class="num cell-bold">${fmtBR(mora.atualizado)}</td><td>${status}</td></tr>`;}).join('');
   const aprovDiv=document.getElementById('overview-approvals');
-  const visivelOverview=aprovPendentes.filter(a=>!(a.transitoria&&a.valor<0)&&!(a.vinculo&&!isParentApproved(a.vinculo,aprovPendentes))).sort((a,b)=>(a.transitoria&&a.valor>0?0:1)-(b.transitoria&&b.valor>0?0:1)).slice(0,3);
-  aprovDiv.innerHTML=visivelOverview.length===0?'<div class="empty-state"><h4>Nenhuma aprovação pendente</h4><p>Mesa limpa.</p></div>':visivelOverview.map(a=>renderApprovalCard(a,aprovPendentes)).join('');
+  const visivelOverview=aprovPendentes.filter(a=>!(a.transitoria&&a.valor<0)).sort((a,b)=>{const gk=i=>i.transitoria&&i.valor>0?`A_${i.id}`:i.vinculo?`A_${i.vinculo}_Z`:`B_${i.id}`;return gk(a).localeCompare(gk(b));}).slice(0,3);
+  aprovDiv.innerHTML=visivelOverview.length===0?'<div class="empty-state"><h4>Nenhum pagamento pendente</h4><p>Mesa limpa.</p></div>':visivelOverview.map(a=>renderApprovalCard(a,aprovPendentes,null)).join('');
 }
 
 // ===== RENDER INADIMPLÊNCIA =====
@@ -799,38 +807,55 @@ function renderEvolucaoChart(){
 }
 
 // ===== RENDER APROVAÇÕES =====
-function getCategoryIcon(cat){const c=(cat||'').toLowerCase().trim();const icons={'compra':{bg:'rgba(88,148,196,.12)',color:'#5894C4',svg:'<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>'},'serviço':{bg:'rgba(111,167,72,.12)',color:'#6FA748',svg:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/>'},'financeiro':{bg:'rgba(212,160,74,.12)',color:'#D4A04A',svg:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>'},'conta transitória':{bg:'rgba(29,158,117,.12)',color:'#1D9E75',svg:'<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/>'},'pessoal':{bg:'rgba(196,88,70,.12)',color:'#C45846',svg:'<path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/>'},'tecnologia':{bg:'rgba(88,148,196,.12)',color:'#5894C4',svg:'<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>'}};const fallback={bg:'rgba(138,150,138,.12)',color:'#8A968A',svg:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>'};return icons[c]||fallback;}
+function getCategoryIcon(cat){const c=(cat||'').toLowerCase().trim();const icons={
+  'compra':{bg:'rgba(88,148,196,.12)',color:'#5894C4',svg:'<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>'},
+  'serviço':{bg:'rgba(111,167,72,.12)',color:'#6FA748',svg:'<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/>'},
+  'financeiro':{bg:'rgba(212,160,74,.12)',color:'#D4A04A',svg:'<path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>'},
+  'conta transitória':{bg:'rgba(29,158,117,.12)',color:'#1D9E75',svg:'<path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/>'},
+  'pessoal':{bg:'rgba(196,88,70,.12)',color:'#C45846',svg:'<path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/>'},
+  'plano de saúde':{bg:'rgba(196,88,70,.12)',color:'#C45846',svg:'<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>'},
+  'iof plano de saúde':{bg:'rgba(196,88,70,.12)',color:'#C45846',svg:'<path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>'},
+  'serviços contábeis e fiscais':{bg:'rgba(111,167,72,.12)',color:'#6FA748',svg:'<path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>'},
+  'vale transporte':{bg:'rgba(88,148,196,.12)',color:'#5894C4',svg:'<rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/>'},
+  'tecnologia':{bg:'rgba(88,148,196,.12)',color:'#5894C4',svg:'<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>'},
+  'despesas financeiras':{bg:'rgba(212,160,74,.12)',color:'#D4A04A',svg:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'},
+  'pró-labore':{bg:'rgba(127,119,221,.12)',color:'#7F77DD',svg:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/>'},
+  'rescisão':{bg:'rgba(196,88,70,.12)',color:'#C45846',svg:'<path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M18 8l4-4M22 8l-4-4"/>'},
+};const fallback={bg:'rgba(138,150,138,.12)',color:'#8A968A',svg:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>'};return icons[c]||fallback;}
 function calcAprovacoesTotal(items){return items.reduce((s,a)=>{if(a.transitoria&&a.valor<0)return s;if(a.vinculo)return s;return s+a.valor;},0);}
 function calcAprovacoesCount(items){return items.filter(a=>!(a.transitoria&&a.valor<0)&&!a.vinculo).length;}
 function isParentApproved(vinculoId,allItems){if(!vinculoId)return true;return!allItems.find(x=>x.id===vinculoId);}
-function renderApprovalCard(a,allItems){
+
+function renderApprovalCard(a,allItems,orderNum){
   const icon=getCategoryIcon(a.categoria);
   const iconHtml=`<div class="approval-icon" style="background:${icon.bg}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${icon.color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icon.svg}</svg></div>`;
-  const hasVinculo=!!a.vinculo;const isLocked=hasVinculo&&!isParentApproved(a.vinculo,allItems);const isTransitPos=a.transitoria&&a.valor>0;const hasVinculados=isTransitPos&&allItems&&allItems.some(x=>x.vinculo===a.id);
-  let ordemBadge='';
-  if(isTransitPos&&hasVinculados)ordemBadge=` <span class="badge" style="background:rgba(212,160,74,.15);color:#D4A04A;border:1px solid rgba(212,160,74,.3);font-size:10px">1º APROVAR</span>`;
-  else if(hasVinculo)ordemBadge=isLocked?` <span class="badge" style="background:rgba(138,150,138,.12);color:#8A968A;border:1px solid rgba(138,150,138,.25);font-size:10px">🔒 2º AGUARDANDO</span>`:`<span class="badge" style="background:rgba(111,167,72,.12);color:#6FA748;border:1px solid rgba(111,167,72,.25);font-size:10px">✓ 2º LIBERADO</span>`;
+  const isTransitPos=a.transitoria&&a.valor>0;
+  let transitTag='';if(a.transitoria&&a.valor>0)transitTag=` <span class="badge badge-info" style="background:rgba(29,158,117,.12);color:#1D9E75;border-color:rgba(29,158,117,.25)">transferência</span>`;
   let detalhamento='';
-  if(isTransitPos&&allItems){const vincs=allItems.filter(x=>x.vinculo===a.id);if(vincs.length>0){detalhamento=`<div style="margin-top:10px;padding:10px 12px;background:var(--bg-elev-2);border-radius:6px;border-left:2px solid var(--eden-accent)"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);margin-bottom:6px;font-weight:600">Detalhamento</div>${vincs.map(v=>{const vi=getCategoryIcon(v.categoria);return`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--text-secondary)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${vi.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${vi.svg}</svg><span style="flex:1">${v.titulo}</span><span style="font-family:var(--font-mono);color:var(--text-muted)">${fmtBR(v.valor)}</span></div>`;}).join('')}</div>`;}}
-  let transitTag='';if(a.transitoria){const txt=a.valor>0?'transferência':'contrapartida';transitTag=` <span class="badge badge-info" style="background:rgba(29,158,117,.12);color:#1D9E75;border-color:rgba(29,158,117,.25)">${txt}</span>`;}
-  let valorHtml=`<div class="approval-amount">${fmtBR(a.valor)}</div>`;
-  if(a.transitoria&&a.valor<0)valorHtml=`<div class="approval-amount" style="color:var(--text-faint);font-size:14px;font-style:italic">${fmtBR(a.valor)}<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-top:2px">não soma ao total</div></div>`;
-  const approveOnclick=isLocked?`blockedApproval('${a.vinculo}')`:`decideAprov('${a.id}','aprovado')`;
-  const rejectOnclick=isLocked?`blockedApproval('${a.vinculo}')`:`decideAprov('${a.id}','rejeitado')`;
-  const approveBtn=isLocked?`<button class="btn btn-sm" style="background:rgba(138,150,138,.1);color:var(--text-muted);border-color:rgba(138,150,138,.2);cursor:not-allowed" onclick="${approveOnclick}">🔒 Aprovar</button>`:`<button class="btn btn-sm" style="background:rgba(111,167,72,.15);color:var(--success);border-color:rgba(111,167,72,.3)" onclick="${approveOnclick}">Aprovar</button>`;
-  const rejectBtn=isLocked?`<button class="btn btn-sm" style="background:rgba(138,150,138,.05);color:var(--text-muted);border-color:rgba(138,150,138,.15);cursor:not-allowed" onclick="${rejectOnclick}">🔒 Rejeitar</button>`:`<button class="btn btn-sm btn-danger" onclick="${rejectOnclick}">Rejeitar</button>`;
-  return`<div class="approval-card" style="${isLocked?'border-left:3px solid var(--text-faint);opacity:.65;':''}">${iconHtml}<div class="approval-content"><h4>${a.titulo}${transitTag}${ordemBadge}</h4><div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${a.descricao||''}</div><div class="approval-meta"><span><strong style="color:var(--text-secondary)">${a.solicitante}</strong></span><span>·</span><span><span class="badge badge-neutral">${a.categoria}</span></span><span>·</span><span>${fmtDate(a.data)}</span></div>${detalhamento}</div><div style="text-align:right">${valorHtml}<div class="approval-actions" style="margin-top:8px;justify-content:flex-end">${approveBtn}${rejectBtn}<button class="icon-btn" title="Editar" onclick="editItem('aprovacoes','${a.id}')">✎</button><button class="icon-btn danger" title="Excluir" onclick="hardDeleteAprov('${a.id}')">✕</button></div></div></div>`;
+  if(isTransitPos&&allItems){
+    const vincs=allItems.filter(x=>x.vinculo===a.id&&!(x.transitoria&&x.valor<0));
+    if(vincs.length>0){
+      detalhamento=`<div class="aprov-det"><div class="aprov-det-title">Destino dos recursos</div>${vincs.map(v=>{const vi=getCategoryIcon(v.categoria);return`<div class="aprov-det-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="${vi.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${vi.svg}</svg><span>${v.titulo}</span><span class="aprov-det-val">${fmtBR(v.valor)}</span></div>`;}).join('')}</div>`;
+    }
+  }
+  const orderHtml=orderNum?`<div class="aprov-order"><div class="aprov-order-num">${orderNum}º</div><div class="aprov-order-label">a pagar</div></div>`:'';
+  return`<div class="approval-card">${orderHtml}${iconHtml}<div class="approval-content"><h4>${a.titulo}${transitTag}</h4><div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${a.descricao||''}</div><div class="approval-meta"><span><strong style="color:var(--text-secondary)">${a.solicitante}</strong></span><span>·</span><span><span class="badge badge-neutral">${a.categoria}</span></span><span>·</span><span>${fmtDate(a.data)}</span></div>${detalhamento}</div><div style="text-align:right"><div class="approval-amount">${fmtBR(a.valor)}</div><div class="approval-actions" style="margin-top:8px;justify-content:flex-end"><button class="icon-btn" title="Editar" onclick="editItem('aprovacoes','${a.id}')">✎</button><button class="icon-btn danger" title="Excluir" onclick="hardDeleteAprov('${a.id}')">✕</button></div></div></div>`;
 }
-function blockedApproval(parentId){const parent=state.aprovacoes.find(x=>x.id===parentId);toast(`⚠️ Ordem: aprove primeiro "${parent?parent.titulo:'a transferência de origem'}"`, 'warning');}
+
 function renderAprovacoes(){
   const pendentes=state.aprovacoes.filter(a=>a.status==='pendente');
-  const visiveis=pendentes.filter(a=>!(a.transitoria&&a.valor<0)).sort((a,b)=>{const ordem=i=>i.transitoria&&i.valor>0?0:!i.vinculo&&!i.transitoria?1:i.vinculo?2:3;const diff=ordem(a)-ordem(b);if(diff!==0)return diff;if(a.vinculo&&b.vinculo)return a.vinculo.localeCompare(b.vinculo);return 0;});
+  const visiveis=pendentes.filter(a=>!(a.transitoria&&a.valor<0));
+  visiveis.sort((a,b)=>{
+    const gk=i=>i.transitoria&&i.valor>0?`A_${i.id}`:i.vinculo?`A_${i.vinculo}_Z`:`B_${i.id}`;
+    return gk(a).localeCompare(gk(b));
+  });
   const list=document.getElementById('aprovacoes-list');
-  list.innerHTML=visiveis.length===0?'<div class="empty-state"><h4>Nenhuma aprovação pendente</h4><p>Mesa limpa, capitão.</p></div>':visiveis.map(a=>renderApprovalCard(a,pendentes)).join('');
+  list.innerHTML=visiveis.length===0?'<div class="empty-state"><h4>Nenhum pagamento pendente</h4><p>Mesa limpa.</p></div>':visiveis.map((a,i)=>renderApprovalCard(a,pendentes,i+1)).join('');
   const hist=state.historico.slice().reverse();
   const tbody=document.getElementById('historico-tbody');
   tbody.innerHTML=hist.length===0?'<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">Nenhum histórico.</td></tr>':hist.slice(0,10).map(h=>`<tr><td class="cell-bold">${h.titulo}</td><td class="cell-muted">${h.solicitante}</td><td><span class="badge ${h.decisao==='aprovado'?'badge-success':'badge-danger'}">${h.decisao}</span></td><td class="cell-muted">${fmtDate(h.data)}</td><td class="num">${fmtBR(h.valor)}</td></tr>`).join('');
 }
+
 function renderDados(){document.getElementById('stat-inad').textContent=state.inadimplencia.filter(b=>b.status!=='pago').length;document.getElementById('stat-aprov').textContent=state.aprovacoes.filter(a=>a.status==='pendente').length;}
 
 // ===== ACTIONS =====
