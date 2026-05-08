@@ -306,6 +306,7 @@
       <div class="nav-section">Operação</div>
       <div class="nav-item" data-view="ges-overview"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span><span>Visão Geral</span></div>
       <div class="nav-item" data-view="ges-carteira"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span><span>Carteira de Lojas</span></div>
+      <div class="nav-item" data-view="ges-dados"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span><span>Dados</span></div>
     </div>
   </nav>
   <div class="sidebar-footer">
@@ -431,6 +432,45 @@
       </table></div>
     </div>
   </section>
+
+  <!-- GESTÃO: DADOS -->
+  <section class="view" id="view-ges-dados">
+    <div class="data-grid">
+      <div class="data-card" style="grid-column:1/-1;border-left:3px solid var(--eden-accent)">
+        <h3>Atualizar dados das lojas</h3>
+        <p>Cole um JSON com os novos dados ou envie um arquivo CSV. Os dados são mesclados por loja + período — histórico não é apagado.</p>
+        <textarea id="ges-import-text" style="min-height:120px" placeholder='{"gestao_lojas":[{"nome":"Kock &amp; Borges","bandeira":"Edificação","cidade":"S. J. Pinhais","uf":"PR","periodo":"2026-05","faturamento":720000,"cmv":0.63,"ticket":64.50,"clientes":11000}]}'></textarea>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="importGesData()">Importar e salvar</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ges-import-file').click()">Selecionar arquivo</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadGesTemplate()">Baixar modelo CSV</button>
+          <input type="file" id="ges-import-file" accept=".json,.csv" style="display:none" onchange="importGesFile(event)">
+        </div>
+        <div id="ges-dados-status" style="margin-top:10px;font-size:12px;color:var(--text-muted)"></div>
+      </div>
+      <div class="data-card">
+        <h3>Formato JSON</h3>
+        <p>Uma linha por loja por mês. Período no formato <strong style="color:var(--text-secondary)">AAAA-MM</strong>.</p>
+        <pre style="background:var(--bg-elev-2);border:1px solid var(--border-soft);border-radius:6px;padding:14px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);overflow-x:auto;">{"gestao_lojas":[
+  {"nome":"Kock &amp; Borges",
+   "bandeira":"Edificação",
+   "cidade":"S. J. Pinhais","uf":"PR",
+   "periodo":"2026-05",
+   "faturamento":720000,
+   "cmv":0.6300,
+   "ticket":64.50,
+   "clientes":11000}
+]}</pre>
+      </div>
+      <div class="data-card">
+        <h3>Formato CSV</h3>
+        <p>Headers obrigatórios na primeira linha. Baixe o modelo para garantir a estrutura certa.</p>
+        <pre style="background:var(--bg-elev-2);border:1px solid var(--border-soft);border-radius:6px;padding:14px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);overflow-x:auto;">nome,bandeira,cidade,uf,periodo,faturamento,cmv,ticket,clientes
+Kock &amp; Borges,Edificação,S. J. Pinhais,PR,2026-05,720000,0.63,64.50,11000</pre>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <!-- MODAL -->
@@ -450,6 +490,7 @@
   <button class="mobile-nav-item" id="mob-fin-dados" data-view="dados" onclick="setView('dados')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg><span>Dados</span></button>
   <button class="mobile-nav-item" id="mob-ges-geral" data-view="ges-overview" onclick="setView('ges-overview')" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Geral</span></button>
   <button class="mobile-nav-item" id="mob-ges-carteira" data-view="ges-carteira" onclick="setView('ges-carteira')" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span>Carteira</span></button>
+  <button class="mobile-nav-item" id="mob-ges-dados" data-view="ges-dados" onclick="setView('ges-dados')" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg><span>Dados</span></button>
 </div>
 
 <div class="toast-container" id="toast-container"></div>
@@ -510,8 +551,11 @@ let syncStatus = 'idle', syncTimer = null, lastSyncAt = null;
 let pendingCloudSave = false, lastSyncOpAt = 0;
 
 // ===== GESTÃO DATA =====
-const GES_MESES = ['Jan','Fev','Mar','Abr'];
-const LOJAS = [
+// Dinâmico — atualizado ao carregar dados do servidor
+let gesCurrentMeses = ['Jan','Fev','Mar','Abr'];
+let gesLojasRaw = []; // dados planos do servidor
+
+let gesLojas = [
   {nome:'Farmácia Salvadora',  b:'BatePreço',  c:'Macaparana',    uf:'PE', fat:[154679,131373,155120,null],   cmv:[.6327,.6585,.6581,null],   tkt:[41.06,38.59,38.75,null],  cli:[3767,3404,4003,null]},
   {nome:'Mesquita Med.',       b:'BatePreço',  c:'Campo Grande',  uf:'MS', fat:[199441,183084,230459,235884], cmv:[.574,.575,.584,.594],      tkt:[45.40,45.25,47.69,49.02], cli:[4393,4046,4832,4811]},
   {nome:'V S Oliveira L1',     b:'BatePreço',  c:'Timon',         uf:'MA', fat:[79678,80618,103700,105353],   cmv:[.6035,.571,.6384,.6028],   tkt:[30.10,29.75,30.95,32.38], cli:[2646,2483,3351,3254]},
@@ -538,6 +582,35 @@ const LOJAS = [
 ];
 let gesFilter_cur='Todas', gesSearch_cur='', gesOpenRow=null;
 
+// Constrói gesLojas a partir dos dados planos do servidor
+function buildLojasFromData(rawData) {
+  if (!rawData || rawData.length === 0) return gesLojas; // mantém hardcoded se vazio
+  const allPeriods = [...new Set(rawData.map(r=>r.periodo).filter(Boolean))].sort();
+  const periods = allPeriods.slice(-4);
+  gesCurrentMeses = periods.map(p => {
+    const [y,m] = p.split('-');
+    return new Date(y, parseInt(m)-1, 1).toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
+  });
+  const byNome = {};
+  rawData.forEach(row => {
+    if (!row.nome) return;
+    if (!byNome[row.nome]) byNome[row.nome]={nome:row.nome,b:row.bandeira||'',c:row.cidade||'',uf:row.uf||'',periodos:{}};
+    byNome[row.nome].periodos[row.periodo]={
+      fat: row.faturamento!==''&&row.faturamento!=null ? parseFloat(row.faturamento)||null : null,
+      cmv: row.cmv!==''&&row.cmv!=null ? parseFloat(row.cmv)||null : null,
+      tkt: row.ticket!==''&&row.ticket!=null ? parseFloat(row.ticket)||null : null,
+      cli: row.clientes!==''&&row.clientes!=null ? parseInt(row.clientes)||null : null
+    };
+  });
+  return Object.values(byNome).map(l=>({
+    nome:l.nome, b:l.b, c:l.c, uf:l.uf,
+    fat:periods.map(p=>l.periodos[p]?.fat??null),
+    cmv:periods.map(p=>l.periodos[p]?.cmv??null),
+    tkt:periods.map(p=>l.periodos[p]?.tkt??null),
+    cli:periods.map(p=>l.periodos[p]?.cli??null),
+  }));
+}
+
 // ===== GESTÃO HELPERS =====
 const gesAvg=arr=>{const v=arr.filter(x=>x!==null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
 const gesSum=arr=>arr.filter(x=>x!==null).reduce((a,b)=>a+b,0);
@@ -553,18 +626,18 @@ function gesChartOpts(tickFn,stacked){return{responsive:true,maintainAspectRatio
 function renderGesOverview(){
   const bandeiras=['BatePreço','Edificação','Dolado'];
   const bColors={'BatePreço':'#D4A04A','Edificação':'#4A7C2E','Dolado':'#5894C4'};
-  const fatTotal=LOJAS.reduce((s,l)=>s+gesSum(l.fat),0);
-  const cmvAvgAll=(()=>{const v=LOJAS.map(l=>gesAvg(l.cmv)).filter(x=>x!==null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})();
-  const tktAvg=(()=>{const v=LOJAS.map(l=>gesAvg(l.tkt)).filter(x=>x!==null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})();
-  const cliTotal=LOJAS.reduce((s,l)=>s+gesSum(l.cli),0);
+  const fatTotal=gesLojas.reduce((s,l)=>s+gesSum(l.fat),0);
+  const cmvAvgAll=(()=>{const v=gesLojas.map(l=>gesAvg(l.cmv)).filter(x=>x!==null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})();
+  const tktAvg=(()=>{const v=gesLojas.map(l=>gesAvg(l.tkt)).filter(x=>x!==null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})();
+  const cliTotal=gesLojas.reduce((s,l)=>s+gesSum(l.cli),0);
   document.getElementById('ges-kpi-grid').innerHTML=`<div class="kpi"><div class="kpi-label">Faturamento Total</div><div class="kpi-value"><span class="currency">R$</span>${gesFmtK(fatTotal).replace('R$','')}</div><div class="kpi-meta">24 lojas · Jan–Abr/2026</div></div><div class="kpi kpi-warning"><div class="kpi-label">CMV Médio</div><div class="kpi-value">${cmvAvgAll?gesFmtPct(cmvAvgAll):'—'}</div><div class="kpi-meta">lojas com dados disponíveis</div></div><div class="kpi kpi-info"><div class="kpi-label">Ticket Médio Geral</div><div class="kpi-value"><span class="currency">R$</span>${tktAvg?tktAvg.toFixed(1):'—'}</div><div class="kpi-meta">média ponderada da rede</div></div><div class="kpi kpi-success"><div class="kpi-label">Clientes/Mês</div><div class="kpi-value">~${Math.round(cliTotal/4/1000)}k</div><div class="kpi-meta">atendimentos médios/mês</div></div>`;
-  const fatBandMes={};bandeiras.forEach(b=>{fatBandMes[b]=GES_MESES.map((_,mi)=>LOJAS.filter(l=>l.b===b).reduce((s,l)=>s+(l.fat[mi]||0),0));});
+  const fatBandMes={};bandeiras.forEach(b=>{fatBandMes[b]=gesCurrentMeses.map((_,mi)=>gesLojas.filter(l=>l.b===b).reduce((s,l)=>s+(l.fat[mi]||0),0));});
   destroyChart('chart-ges-fat');
-  new Chart(document.getElementById('chart-ges-fat'),{type:'bar',data:{labels:GES_MESES,datasets:bandeiras.map(b=>({label:b,data:fatBandMes[b],backgroundColor:bColors[b]+'cc',borderRadius:3,borderSkipped:false}))},options:gesChartOpts(v=>'R$'+(v/1000000).toFixed(1)+'M',true)});
-  const cmvBandMes={};bandeiras.forEach(b=>{cmvBandMes[b]=GES_MESES.map((_,mi)=>{const v=LOJAS.filter(l=>l.b===b&&l.cmv[mi]!==null).map(l=>l.cmv[mi]);return v.length?parseFloat((v.reduce((a,c)=>a+c,0)/v.length*100).toFixed(1)):null;});});
+  new Chart(document.getElementById('chart-ges-fat'),{type:'bar',data:{labels:gesCurrentMeses,datasets:bandeiras.map(b=>({label:b,data:fatBandMes[b],backgroundColor:bColors[b]+'cc',borderRadius:3,borderSkipped:false}))},options:gesChartOpts(v=>'R$'+(v/1000000).toFixed(1)+'M',true)});
+  const cmvBandMes={};bandeiras.forEach(b=>{cmvBandMes[b]=gesCurrentMeses.map((_,mi)=>{const v=gesLojas.filter(l=>l.b===b&&l.cmv[mi]!==null).map(l=>l.cmv[mi]);return v.length?parseFloat((v.reduce((a,c)=>a+c,0)/v.length*100).toFixed(1)):null;});});
   destroyChart('chart-ges-cmv');
-  new Chart(document.getElementById('chart-ges-cmv'),{type:'line',data:{labels:GES_MESES,datasets:bandeiras.map(b=>({label:b,data:cmvBandMes[b],borderColor:bColors[b],backgroundColor:bColors[b]+'22',fill:true,tension:.35,borderWidth:2,pointRadius:3,spanGaps:true}))},options:gesChartOpts(v=>v+'%',false)});
-  const comDados=LOJAS.filter(l=>l.fat.filter(x=>x!==null).length>=2);
+  new Chart(document.getElementById('chart-ges-cmv'),{type:'line',data:{labels:gesCurrentMeses,datasets:bandeiras.map(b=>({label:b,data:cmvBandMes[b],borderColor:bColors[b],backgroundColor:bColors[b]+'22',fill:true,tension:.35,borderWidth:2,pointRadius:3,spanGaps:true}))},options:gesChartOpts(v=>v+'%',false)});
+  const comDados=gesLojas.filter(l=>l.fat.filter(x=>x!==null).length>=2);
   const topFat=[...comDados].sort((a,b)=>(gesAvg(b.fat)||0)-(gesAvg(a.fat)||0)).slice(0,5);
   const maxFat=gesAvg(topFat[0].fat)||1;
   document.getElementById('ges-top-list').innerHTML=topFat.map(l=>{const af=gesAvg(l.fat);const pct=Math.max(4,(af/maxFat)*100);return `<div class="rank-row"><div class="rank-name">${l.nome}</div><div class="rank-bar-track"><div class="rank-bar-fill" style="width:${pct}%;background:var(--eden-accent)"></div></div><div class="rank-val">${gesFmtK(af)}</div></div>`;}).join('');
@@ -576,7 +649,7 @@ function gesFilterFn(band,btn){gesFilter_cur=band;document.querySelectorAll('.ft
 function gesSearchFn(v){gesSearch_cur=v.toLowerCase();gesOpenRow=null;renderGesCarteira();}
 
 function renderGesCarteira(){
-  const list=LOJAS.filter(l=>(gesFilter_cur==='Todas'||l.b===gesFilter_cur)&&(!gesSearch_cur||l.nome.toLowerCase().includes(gesSearch_cur)||l.c.toLowerCase().includes(gesSearch_cur))).sort((a,b)=>(gesAvg(b.fat)||0)-(gesAvg(a.fat)||0));
+  const list=gesLojas.filter(l=>(gesFilter_cur==='Todas'||l.b===gesFilter_cur)&&(!gesSearch_cur||l.nome.toLowerCase().includes(gesSearch_cur)||l.c.toLowerCase().includes(gesSearch_cur))).sort((a,b)=>(gesAvg(b.fat)||0)-(gesAvg(a.fat)||0));
   const afAll=list.reduce((s,l)=>s+gesSum(l.fat),0);
   const acAll=(()=>{const v=list.map(l=>gesAvg(l.cmv)).filter(x=>x!==null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})();
   const atAll=(()=>{const v=list.map(l=>gesAvg(l.tkt)).filter(x=>x!==null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;})();
@@ -605,7 +678,7 @@ function buildGesDetail(l){
   function card(title,arr,fmtFn,isCmv,isAvg){
     const valids=arr.filter(x=>x!==null);if(!valids.length)return'';
     const mx=Math.max(...valids);
-    const rows=GES_MESES.map((m,i)=>{
+    const rows=gesCurrentMeses.map((m,i)=>{
       const v=arr[i];const pct=v!==null?Math.max(5,(v/mx)*100):0;
       let bg='var(--eden-accent)';if(isCmv&&v!==null)bg=gesCmvColor(v);
       return `<div class="mrow"><div class="mmonth">${m}</div><div class="mbar-track"><div class="mbar-fill" style="width:${v!==null?pct:0}%;background:${v!==null?bg:'var(--bg-elev-3)'}"></div></div><div class="mval ${v===null?'empty':''}">${v!==null?fmtFn(v):'—'}</div></div>`;
@@ -633,7 +706,11 @@ const uid=(p='x')=>p+Math.random().toString(36).substr(2,6);
 
 // ===== STORAGE =====
 function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));document.getElementById('last-saved').textContent='Editado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});if(syncUrl){pendingCloudSave=true;scheduleSync();}}catch(e){toast('Erro ao salvar localmente','danger');}}
-function loadLocal(){try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const p=JSON.parse(raw);['inadimplencia','caixa','aprovacoes','historico'].forEach(k=>state[k]=p[k]||[]);return true;}}catch(e){}return false;}
+function loadLocal(){
+  try{const rawGes=localStorage.getItem('eden_ges_lojas');if(rawGes){const parsed=JSON.parse(rawGes);if(parsed&&parsed.length>0){gesLojasRaw=parsed;gesLojas=buildLojasFromData(gesLojasRaw);}}}catch(e){}
+  try{const raw=localStorage.getItem(STORAGE_KEY);if(raw){const p=JSON.parse(raw);['inadimplencia','caixa','aprovacoes','historico'].forEach(k=>state[k]=p[k]||[]);return true;}}catch(e){}
+  return false;
+}
 
 async function load(){
   if(!syncUrl){if(!loadLocal()){state=JSON.parse(JSON.stringify(SAMPLE));try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}}return'luis';}
@@ -646,8 +723,9 @@ async function load(){
     if(data.error==='unauthorized'){showAccessDenied();return null;}
     if(data.error)throw new Error(data.error);
     ['inadimplencia','caixa','aprovacoes','historico'].forEach(k=>{if(Array.isArray(data[k]))state[k]=data[k].map(item=>normalizeItem(item));});
+    if(Array.isArray(data.gestao_lojas)){gesLojasRaw=data.gestao_lojas;gesLojas=buildLojasFromData(gesLojasRaw);}
     lastSyncAt=new Date();
-    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(e){}
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));localStorage.setItem('eden_ges_lojas',JSON.stringify(gesLojasRaw));}catch(e){}
     setSyncStatus('online');
     return data.role||'luis';
   }catch(e){
@@ -707,11 +785,11 @@ function switchSpace(space){
   document.getElementById('nav-ges-items').style.display=space==='gestao'?'block':'none';
   const gesBadge=document.getElementById('topbar-ges-badge');if(gesBadge)gesBadge.style.display=space==='gestao'?'flex':'none';
   ['mob-fin-geral','mob-fin-receber','mob-fin-aprovar','mob-fin-dados'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=space==='financeiro'?'flex':'none';});
-  ['mob-ges-geral','mob-ges-carteira'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=space==='gestao'?'flex':'none';});
+  ['mob-ges-geral','mob-ges-carteira','mob-ges-dados'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=space==='gestao'?'flex':'none';});
   if(space==='financeiro')setView('overview');else setView('ges-overview');
 }
 
-const VIEW_TITLES={overview:'Visão Geral',inadimplencia:'Contas a Receber',caixa:'Fluxo de Caixa',aprovacoes:'Aprovações',dados:'Dados','ges-overview':'Visão Geral','ges-carteira':'Carteira de Lojas'};
+const VIEW_TITLES={overview:'Visão Geral',inadimplencia:'Contas a Receber',caixa:'Fluxo de Caixa',aprovacoes:'Aprovações',dados:'Dados','ges-overview':'Visão Geral','ges-carteira':'Carteira de Lojas','ges-dados':'Dados'};
 
 document.querySelectorAll('.nav-item').forEach(item=>{item.addEventListener('click',()=>{if(item.dataset.view)setView(item.dataset.view);});});
 
@@ -903,6 +981,103 @@ function renderAll(){
   else if(currentView==='dados')renderDados();
   else if(currentView==='ges-overview')renderGesOverview();
   else if(currentView==='ges-carteira')renderGesCarteira();
+  else if(currentView==='ges-dados')renderGesDados();
+}
+
+
+// ===== GESTÃO DADOS =====
+function renderGesDados() {
+  // static view — nothing to render dynamically
+  const status = document.getElementById('ges-dados-status');
+  if (status && gesLojasRaw.length > 0) {
+    const periods = [...new Set(gesLojasRaw.map(r=>r.periodo).filter(Boolean))].sort();
+    status.textContent = gesLojasRaw.length + ' registros · ' + gesLojasRaw.filter((v,i,a)=>a.findIndex(r=>r.nome===v.nome)===i).length + ' lojas · períodos: ' + periods.join(', ');
+  }
+}
+
+function importGesData() {
+  const txt = document.getElementById('ges-import-text')?.value.trim();
+  if (!txt) { toast('Cole os dados primeiro', 'warning'); return; }
+  try {
+    const data = JSON.parse(txt);
+    const rows = data.gestao_lojas;
+    if (!Array.isArray(rows) || rows.length === 0) { toast('Esperado {"gestao_lojas":[...]}', 'danger'); return; }
+    mergeGesData(rows);
+    document.getElementById('ges-import-text').value = '';
+  } catch(e) { toast('JSON inválido', 'danger'); }
+}
+
+function importGesFile(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      if (f.name.endsWith('.csv')) {
+        const lines = ev.target.result.trim().split('
+');
+        const headers = lines[0].split(',').map(h => h.trim());
+        const rows = lines.slice(1).map(line => {
+          const vals = line.split(',');
+          const obj = {};
+          headers.forEach((h, i) => obj[h] = vals[i]?.trim());
+          ['faturamento','cmv','ticket','clientes'].forEach(k => { if(obj[k]!==undefined) obj[k] = parseFloat(obj[k])||0; });
+          return obj;
+        }).filter(r => r.nome);
+        mergeGesData(rows);
+      } else {
+        const data = JSON.parse(ev.target.result);
+        if (data.gestao_lojas) mergeGesData(data.gestao_lojas);
+        else toast('JSON inválido', 'danger');
+      }
+    } catch(err) { toast('Arquivo inválido: ' + err.message, 'danger'); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+}
+
+function mergeGesData(newRows) {
+  newRows.forEach(row => {
+    const idx = gesLojasRaw.findIndex(r => r.nome === row.nome && r.periodo === row.periodo);
+    if (idx >= 0) gesLojasRaw[idx] = row;
+    else gesLojasRaw.push(row);
+  });
+  gesLojas = buildLojasFromData(gesLojasRaw);
+  try { localStorage.setItem('eden_ges_lojas', JSON.stringify(gesLojasRaw)); } catch(e) {}
+  saveGestaoToCloud(gesLojasRaw);
+  renderAll();
+  toast(newRows.length + ' linha(s) importadas com sucesso', 'success');
+}
+
+async function saveGestaoToCloud(lojas) {
+  if (!syncUrl) {
+    toast('Planilha não configurada — dados salvos só localmente', 'warning');
+    return;
+  }
+  try {
+    const payload = { token: URL_TOKEN, data: { gestao_lojas: lojas } };
+    const res = await fetch(syncUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    toast('Salvo na planilha ✓', 'success');
+    renderGesDados();
+  } catch(e) {
+    toast('Erro ao salvar na planilha: ' + e.message, 'danger');
+  }
+}
+
+function downloadGesTemplate() {
+  const headers = 'nome,bandeira,cidade,uf,periodo,faturamento,cmv,ticket,clientes';
+  const ex = 'Kock & Borges,Edificação,S. J. Pinhais,PR,2026-05,720000,0.6300,64.50,11000';
+  const blob = new Blob([headers + '
+' + ex], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='template_gestao_lojas.csv';
+  a.click(); URL.revokeObjectURL(url);
 }
 
 // ===== INIT =====
