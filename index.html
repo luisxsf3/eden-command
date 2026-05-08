@@ -1013,8 +1013,7 @@ function importGesFile(e) {
   r.onload = ev => {
     try {
       if (f.name.endsWith('.csv')) {
-        const lines = ev.target.result.trim().split('
-');
+        const lines = ev.target.result.trim().split('\n');
         const headers = lines[0].split(',').map(h => h.trim());
         const rows = lines.slice(1).map(line => {
           const vals = line.split(',');
@@ -1073,8 +1072,7 @@ async function saveGestaoToCloud(lojas) {
 function downloadGesTemplate() {
   const headers = 'nome,bandeira,cidade,uf,periodo,faturamento,cmv,ticket,clientes';
   const ex = 'Kock & Borges,Edificação,S. J. Pinhais,PR,2026-05,720000,0.6300,64.50,11000';
-  const blob = new Blob([headers + '
-' + ex], {type:'text/csv;charset=utf-8'});
+  const blob = new Blob([headers + '\n' + ex], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href=url; a.download='template_gestao_lojas.csv';
   a.click(); URL.revokeObjectURL(url);
