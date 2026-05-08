@@ -299,18 +299,23 @@
       <div class="nav-item active" data-view="overview"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span><span>Visão Geral</span></div>
       <div class="nav-item" data-view="inadimplencia"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h2"/></svg></span><span>Contas a Receber</span><span class="nav-badge" id="badge-inad">0</span></div>
       <div class="nav-item" data-view="aprovacoes"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span><span>Aprovações</span><span class="nav-badge" id="badge-aprov">0</span></div>
+    </div>
+    <div id="nav-ges-items" style="display:none">
       <div class="nav-section">Operação</div>
       <div class="nav-item" data-view="ges-overview"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span><span>Visão Geral</span></div>
-      <div class="nav-item" data-view="ges-carteira"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span><span>Carteira de Lojas</span></div
+      <div class="nav-item" data-view="ges-carteira"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span><span>Carteira de Lojas</span></div>
     </div>
   </nav>
-  <div style="padding:0 12px 8px;border-top:1px solid var(--border-soft)">
-</div>
+  <div id="nav-dados-bottom" style="padding:0 12px 8px;border-top:1px solid var(--border-soft)">
+    <div class="nav-item" data-view="dados"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span><span>Dados</span></div>
+    <div class="nav-item" data-view="ges-dados" style="display:none"><span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span><span>Dados</span></div>
+  </div>
   <div class="sidebar-footer">
     <div class="footer-status"><span class="status-dot" id="sync-dot"></span><span id="sync-label">Aguardando…</span></div>
     <div id="last-saved">—</div>
     <div class="footer-user">
       <div class="footer-user-name" id="footer-user-name">—</div>
+      <div class="footer-user-role" id="footer-user-role">—</div>
     </div>
   </div>
 </aside>
@@ -505,12 +510,12 @@ function showAccessDenied() {
 function applyUserAccess(role) {
   currentRole = role;
   const USERS = {
-    luis: { name: 'Luis Eduardo', role: 'CO' },
+    luis: { name: 'Luis Eduardo', role: 'COO' },
     vini: { name: 'Vinicius',     role: 'Gestão' }
   };
   const u = USERS[role] || { name: role, role: '' };
   document.getElementById('footer-user-name').textContent = u.name;
-  document.getElementById('footer-user-name').textContent = u.name + ' / ' + u.role;
+  document.getElementById('footer-user-role').textContent = u.role + ' · Éden Command';
 
   // Card de links só pra Luis
   const linksCard = document.getElementById('token-links-card');
@@ -733,14 +738,11 @@ async function load(){
 // ===== CLOUD SYNC =====
 function setSyncStatus(status){
   syncStatus=status;
-  const map={idle:{color:'var(--success)',text:'Local',icon:'✓',btn:'Sincronizar',mob:'Local'},syncing:{color:'var(--warning)',text:'Sincronizando…',icon:'⟳',btn:'Sincronizando…',mob:'Sincronizando…'},online:{color:'var(--success)',text:'Sincronizado',icon:'✓',btn:'Sincronizar',mob:'Sincronizado'},offline:{color:'var(--danger)',text:'Offline (só local)',icon:'⚠',btn:'Tentar de novo',mob:'Offline'},error:{color:'var(--danger)',text:'Erro de sincronia',icon:'!',btn:'Tentar de novo',mob:'Erro'}};
+  const map={idle:{color:'var(--text-faint)',text:'Sem sincronização',icon:'↻',btn:'Sincronizar',mob:'Desconectado'},syncing:{color:'var(--warning)',text:'Sincronizando…',icon:'⟳',btn:'Sincronizando…',mob:'Sincronizando…'},online:{color:'var(--success)',text:'Sincronizado',icon:'✓',btn:'Sincronizar',mob:'Sincronizado'},offline:{color:'var(--danger)',text:'Offline (só local)',icon:'⚠',btn:'Tentar de novo',mob:'Offline'},error:{color:'var(--danger)',text:'Erro de sincronia',icon:'!',btn:'Tentar de novo',mob:'Erro'}};
   const m=map[status]||map.idle;
   const s=(id,v,p)=>{const el=document.getElementById(id);if(el)el[p]=v;};
   const dot=document.getElementById('sync-dot');if(dot){dot.style.background=m.color;dot.style.boxShadow='0 0 8px '+m.color;}
-  const sl=document.getElementById('sync-label');if(sl)sl.textContent=m.text;
-const si=document.getElementById('sync-icon');if(si)si.textContent=m.icon;
-const sb=document.getElementById('sync-btn-label');if(sb)sb.textContent=m.btn;
-const ss=document.getElementById('sync-status-text');if(ss)ss.textContent=m.text.toLowerCase();
+  s('sync-label','textContent',m.text);s('sync-icon','textContent',m.icon);s('sync-btn-label','textContent',m.btn);s('sync-status-text','textContent',m.text.toLowerCase());
   const mobDot=document.getElementById('topbar-sync-dot'),mobTxt=document.getElementById('topbar-sync-text'),mobWrap=document.getElementById('topbar-sync-mobile');
   if(mobDot){mobDot.style.background=m.color;mobDot.style.boxShadow='0 0 6px '+m.color;}
   if(mobTxt)mobTxt.textContent=m.mob;if(mobWrap)mobWrap.style.color=m.color;
@@ -782,8 +784,8 @@ function switchSpace(space){
   const spEl=document.getElementById(space==='financeiro'?'sp-fin':'sp-ges');if(spEl)spEl.classList.add('active');
   document.getElementById('nav-fin-items').style.display=space==='financeiro'?'block':'none';
   document.getElementById('nav-ges-items').style.display=space==='gestao'?'block':'none';
-  const dFin=document.querySelector('[data-view="dados"]');if(dFin)dFin.style.display=space==='financeiro'?'flex':'none';
-const dGes=document.querySelector('[data-view="ges-dados"]');if(dGes)dGes.style.display=space==='gestao'?'flex':'none';
+  const dFin=document.querySelector('#nav-dados-bottom [data-view="dados"]');if(dFin)dFin.style.display=space==='financeiro'?'flex':'none';
+  const dGes=document.querySelector('#nav-dados-bottom [data-view="ges-dados"]');if(dGes)dGes.style.display=space==='gestao'?'flex':'none';
   const gesBadge=document.getElementById('topbar-ges-badge');if(gesBadge)gesBadge.style.display=space==='gestao'?'flex':'none';
   ['mob-fin-geral','mob-fin-receber','mob-fin-aprovar','mob-fin-dados'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=space==='financeiro'?'flex':'none';});
   ['mob-ges-geral','mob-ges-carteira','mob-ges-dados'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=space==='gestao'?'flex':'none';});
@@ -921,8 +923,8 @@ function renderApprovalCard(a,allItems,orderNum){
       detalhamento=`<div class="aprov-det"><div class="aprov-det-title">Destino dos recursos</div>${vincs.map(v=>{const vi=getCategoryIcon(v.categoria);return`<div class="aprov-det-row"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="${vi.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${vi.svg}</svg><span>${v.titulo}</span><span class="aprov-det-val">${fmtBR(v.valor)}</span></div>`;}).join('')}</div>`;
     }
   }
-  const ordemHtml=orderNum?`<div style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:6px;background:var(--bg-base);border:1px solid var(--border-strong)"><span style="font-family:var(--font-display);font-size:18px;font-weight:400;line-height:1;color:var(--eden-glow)">${orderNum}º</span><span style="font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--eden-accent);font-weight:600">a pagar</span></div>`:'';
-  return`<div class="approval-card"><div class="approval-icon" style="background:${icon.bg}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${icon.color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icon.svg}</svg></div><div class="approval-content"><h4>${a.titulo}${transitTag}</h4><div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${a.descricao||''}</div><div class="approval-meta"><span><strong style="color:var(--text-secondary)">${a.solicitante}</strong></span><span>·</span><span><span class="badge badge-neutral">${a.categoria}</span></span><span>·</span><span>${fmtDate(a.data)}</span></div>${detalhamento}</div><div style="text-align:right;min-width:110px"><div class="approval-amount">${fmtBR(a.valor)}</div><div style="margin-top:8px">${ordemHtml}</div><div class="approval-actions" style="margin-top:6px;justify-content:flex-end;opacity:.45" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.45'"><button class="icon-btn" title="Editar" onclick="editItem('aprovacoes','${a.id}')">✎</button><button class="icon-btn danger" title="Excluir" onclick="hardDeleteAprov('${a.id}')">✕</button></div></div></div>`;
+  const orderHtml=orderNum?`<div class="aprov-order"><div class="aprov-order-num">${orderNum}º</div><div class="aprov-order-label">a pagar</div></div>`:'';
+  return`<div class="approval-card">${orderHtml}${iconHtml}<div class="approval-content"><h4>${a.titulo}${transitTag}</h4><div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${a.descricao||''}</div><div class="approval-meta"><span><strong style="color:var(--text-secondary)">${a.solicitante}</strong></span><span>·</span><span><span class="badge badge-neutral">${a.categoria}</span></span><span>·</span><span>${fmtDate(a.data)}</span></div>${detalhamento}</div><div style="text-align:right"><div class="approval-amount">${fmtBR(a.valor)}</div><div class="approval-actions" style="margin-top:8px;justify-content:flex-end"><button class="icon-btn" title="Editar" onclick="editItem('aprovacoes','${a.id}')">✎</button><button class="icon-btn danger" title="Excluir" onclick="hardDeleteAprov('${a.id}')">✕</button></div></div></div>`;
 }
 
 function renderAprovacoes(){
@@ -1083,7 +1085,7 @@ function downloadGesTemplate() {
 async function init(){
   document.getElementById('sync-url-input').value=syncUrl;
   document.getElementById('sync-token-input').value=syncToken;
-  setSyncStatus(syncUrl?'syncing':'online');
+  setSyncStatus(syncUrl?'syncing':'idle');
 
   const role=await load();
   if(role===null)return; // access denied — para aqui
