@@ -435,25 +435,24 @@
   </section>
 
   <!-- GESTÃO: DADOS -->
- <section class="view" id="view-dados">
+  <section class="view" id="view-ges-dados">
     <div class="data-grid">
-      <div class="data-card" style="grid-column:1/-1;border-left:3px solid var(--eden-accent)">
+
+      <!-- [NOVO] Card de conexão com Sheets para o Vini -->
+      <div class="data-card" id="ges-sync-card" style="grid-column:1/-1;border-left:3px solid var(--eden-accent)">
         <h3>Conexão com Google Sheets</h3>
-        <p>Cole a URL do Apps Script e o TOKEN_LUIS no campo token. Apenas Luis pode salvar dados.</p>
-        <div class="form-group"><label>URL do Web App (termina em /exec)</label><input type="text" id="sync-url-input" placeholder="https://script.google.com/macros/s/.../exec"></div>
-        <div class="form-group"><label>Token (TOKEN_LUIS)</label><input type="text" id="sync-token-input" placeholder="EDEN-COO-2026"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-primary btn-sm" onclick="connectSync()">Conectar</button><button class="btn btn-ghost btn-sm" onclick="testSync()">Testar conexão</button><button class="btn btn-danger btn-sm" onclick="disconnectSync()">Desconectar</button></div>
-        <div class="data-stat"><span class="label">Status</span><span class="value" id="sync-status-text">desconectado</span></div>
-        <div class="data-stat"><span class="label">Última sincronização</span><span class="value" id="sync-last-text">—</span></div>
+        <p>Cole a URL do Apps Script e o token de acesso para salvar os dados das lojas na planilha.</p>
+        <div class="form-group"><label>URL do Web App (termina em /exec)</label><input type="text" id="ges-sync-url-input" placeholder="https://script.google.com/macros/s/.../exec"></div>
+        <div class="form-group"><label>Token</label><input type="text" id="ges-sync-token-input" placeholder="EDEN-GES-2026"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="connectGesSync()">Conectar</button>
+          <button class="btn btn-ghost btn-sm" onclick="testGesSync()">Testar conexão</button>
+          <button class="btn btn-danger btn-sm" onclick="disconnectGesSync()">Desconectar</button>
+        </div>
+        <div class="data-stat"><span class="label">Status</span><span class="value" id="ges-sync-status-text">desconectado</span></div>
       </div>
-      <div class="data-card" id="token-links-card" style="grid-column:1/-1;border-left:3px solid var(--warning);display:none">
-        <h3>Links de acesso</h3>
-        <p>Envie o link correspondente para cada usuário. Sem o token correto, a página mostra acesso negado.</p>
-        <div style="margin-bottom:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em">Luis Eduardo — acesso completo</div><div class="token-box" id="link-luis">—</div></div>
-        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em">Vinicius — apenas Éden Gestão</div><div class="token-box" id="link-vini">—</div></div>
-        <div style="margin-top:14px;padding:10px 12px;background:var(--bg-elev-2);border-radius:6px;font-size:11px;color:var(--text-muted)">Para trocar os tokens, edite TOKEN_LUIS e TOKEN_VINI no Apps Script e reimplante.</div>
-      </div>
-      <div class="data-card">
+
+      <div class="data-card" style="grid-column:1/-1;border-left:3px solid var(--eden-accent)">
         <h3>Atualizar dados das lojas</h3>
         <p>Cole um JSON com os novos dados ou envie um arquivo CSV. Os dados são mesclados por loja + período — histórico não é apagado.</p>
         <textarea id="ges-import-text" style="min-height:120px" placeholder='{"gestao_lojas":[{"nome":"Kock &amp; Borges","bandeira":"Edificação","cidade":"S. J. Pinhais","uf":"PR","periodo":"2026-05","faturamento":720000,"cmv":0.63,"ticket":64.50,"clientes":11000}]}'></textarea>
@@ -514,10 +513,8 @@ Kock &amp; Borges,Edificação,S. J. Pinhais,PR,2026-05,720000,0.63,64.50,11000<
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ===== TOKEN AUTH =====
-// Token vem da URL: ?token=XXXX
-// Apps Script valida e devolve data.role = 'luis' ou 'vini'
 const URL_TOKEN = new URLSearchParams(window.location.search).get('token') || '';
-let currentRole = 'luis'; // atualizado após load()
+let currentRole = 'luis';
 
 function showAccessDenied() {
   document.getElementById('access-denied').classList.add('show');
@@ -533,7 +530,6 @@ function applyUserAccess(role) {
   document.getElementById('footer-user-name').textContent = u.name;
   document.getElementById('footer-user-role').textContent = u.role + ' · Éden Command';
 
-  // Card de links só pra Luis
   const linksCard = document.getElementById('token-links-card');
   if (linksCard && role === 'luis') {
     linksCard.style.display = 'block';
@@ -542,7 +538,6 @@ function applyUserAccess(role) {
     document.getElementById('link-vini').textContent = base + '?token=EDEN-GES-2026';
   }
 
-  // Vini: esconde espaço financeiro
   if (role === 'vini') {
     document.getElementById('sp-fin').style.display = 'none';
     document.getElementById('sp-ges-badge').textContent = 'único';
@@ -568,9 +563,8 @@ let syncStatus = 'idle', syncTimer = null, lastSyncAt = null;
 let pendingCloudSave = false, lastSyncOpAt = 0;
 
 // ===== GESTÃO DATA =====
-// Dinâmico — atualizado ao carregar dados do servidor
 let gesCurrentMeses = ['Jan','Fev','Mar','Abr'];
-let gesLojasRaw = []; // dados planos do servidor
+let gesLojasRaw = [];
 
 let gesLojas = [
   {nome:'Farmácia Salvadora',  b:'BatePreço',  c:'Macaparana',    uf:'PE', fat:[154679,131373,155120,null],   cmv:[.6327,.6585,.6581,null],   tkt:[41.06,38.59,38.75,null],  cli:[3767,3404,4003,null]},
@@ -599,9 +593,8 @@ let gesLojas = [
 ];
 let gesFilter_cur='Todas', gesSearch_cur='', gesOpenRow=null;
 
-// Constrói gesLojas a partir dos dados planos do servidor
 function buildLojasFromData(rawData) {
-  if (!rawData || rawData.length === 0) return gesLojas; // mantém hardcoded se vazio
+  if (!rawData || rawData.length === 0) return gesLojas;
   const allPeriods = [...new Set(rawData.map(r=>r.periodo).filter(Boolean))].sort();
   const periods = allPeriods.slice(-4);
   gesCurrentMeses = periods.map(p => {
@@ -756,12 +749,11 @@ function setSyncStatus(status){
   syncStatus=status;
   const map={idle:{color:'var(--text-faint)',text:'Sem sincronização',icon:'↻',btn:'Sincronizar',mob:'Desconectado'},syncing:{color:'var(--warning)',text:'Sincronizando…',icon:'⟳',btn:'Sincronizando…',mob:'Sincronizando…'},online:{color:'var(--success)',text:'Sincronizado',icon:'✓',btn:'Sincronizar',mob:'Sincronizado'},offline:{color:'var(--danger)',text:'Offline (só local)',icon:'⚠',btn:'Tentar de novo',mob:'Offline'},error:{color:'var(--danger)',text:'Erro de sincronia',icon:'!',btn:'Tentar de novo',mob:'Erro'}};
   const m=map[status]||map.idle;
-  const s=(id,v,p)=>{const el=document.getElementById(id);if(el)el[p]=v;};
   const dot=document.getElementById('sync-dot');if(dot){dot.style.background=m.color;dot.style.boxShadow='0 0 8px '+m.color;}
   const sl=document.getElementById('sync-label');if(sl)sl.textContent=m.text;
-const si=document.getElementById('sync-icon');if(si)si.textContent=m.icon;
-const sb=document.getElementById('sync-btn-label');if(sb)sb.textContent=m.btn;
-const ss=document.getElementById('sync-status-text');if(ss)ss.textContent=m.text.toLowerCase();
+  const si=document.getElementById('sync-icon');if(si)si.textContent=m.icon;
+  const sb=document.getElementById('sync-btn-label');if(sb)sb.textContent=m.btn;
+  const ss=document.getElementById('sync-status-text');if(ss)ss.textContent=m.text.toLowerCase();
   const mobDot=document.getElementById('topbar-sync-dot'),mobTxt=document.getElementById('topbar-sync-text'),mobWrap=document.getElementById('topbar-sync-mobile');
   if(mobDot){mobDot.style.background=m.color;mobDot.style.boxShadow='0 0 6px '+m.color;}
   if(mobTxt)mobTxt.textContent=m.mob;if(mobWrap)mobWrap.style.color=m.color;
@@ -928,11 +920,9 @@ function getCategoryIcon(cat){const c=(cat||'').toLowerCase().trim();const icons
 };const fallback={bg:'rgba(138,150,138,.12)',color:'#8A968A',svg:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>'};return icons[c]||fallback;}
 function calcAprovacoesTotal(items){return items.reduce((s,a)=>{if(a.transitoria&&a.valor<0)return s;if(a.vinculo)return s;return s+a.valor;},0);}
 function calcAprovacoesCount(items){return items.filter(a=>!(a.transitoria&&a.valor<0)&&!a.vinculo).length;}
-function isParentApproved(vinculoId,allItems){if(!vinculoId)return true;return!allItems.find(x=>x.id===vinculoId);}
 
 function renderApprovalCard(a,allItems,orderNum){
   const icon=getCategoryIcon(a.categoria);
-  const iconHtml=`<div class="approval-icon" style="background:${icon.bg}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${icon.color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icon.svg}</svg></div>`;
   const isTransitPos=a.transitoria&&a.valor>0;
   let transitTag='';if(a.transitoria&&a.valor>0)transitTag=` <span class="badge badge-info" style="background:rgba(29,158,117,.12);color:#1D9E75;border-color:rgba(29,158,117,.25)">transferência</span>`;
   let detalhamento='';
@@ -943,7 +933,7 @@ function renderApprovalCard(a,allItems,orderNum){
     }
   }
   const ordemHtml=orderNum?`<div class="aprov-order"><div class="aprov-order-num">${orderNum}º</div><div class="aprov-order-label">a pagar</div></div>`:'';
-const concluidoBtn=`<button onclick="decideAprov('${a.id}','aprovado')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(111,167,72,.3);background:transparent;color:var(--success);cursor:pointer;font-family:var(--font-body);transition:all .15s" onmouseover="this.style.background='rgba(111,167,72,.1)'" onmouseout="this.style.background='transparent'">✓ Concluído</button>`;
+  const concluidoBtn=`<button onclick="decideAprov('${a.id}','aprovado')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(111,167,72,.3);background:transparent;color:var(--success);cursor:pointer;font-family:var(--font-body);transition:all .15s" onmouseover="this.style.background='rgba(111,167,72,.1)'" onmouseout="this.style.background='transparent'">✓ Concluído</button>`;
   return`<div class="approval-card"><div class="approval-icon" style="background:${icon.bg}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${icon.color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icon.svg}</svg></div><div class="approval-content"><h4>${a.titulo}${transitTag}</h4><div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${a.descricao||''}</div><div class="approval-meta"><span><strong style="color:var(--text-secondary)">${a.solicitante}</strong></span><span>·</span><span><span class="badge badge-neutral">${a.categoria}</span></span><span>·</span><span>${fmtDate(a.data)}</span></div>${detalhamento}</div><div style="text-align:right;min-width:110px"><div style="margin-bottom:6px">${concluidoBtn}</div><div class="approval-amount">${fmtBR(a.valor)}</div><div style="margin-top:8px">${ordemHtml}</div><div class="approval-actions" style="margin-top:6px;justify-content:flex-end;opacity:.45" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.45'"><button class="icon-btn" title="Editar" onclick="editItem('aprovacoes','${a.id}')">✎</button><button class="icon-btn danger" title="Excluir" onclick="hardDeleteAprov('${a.id}')">✕</button></div></div></div>`;}
 
 function renderAprovacoes(){
@@ -1006,15 +996,66 @@ function renderAll(){
   else if(currentView==='ges-dados')renderGesDados();
 }
 
-
 // ===== GESTÃO DADOS =====
 function renderGesDados() {
-  // static view — nothing to render dynamically
+  // Preenche campos com valores salvos
+  const urlEl = document.getElementById('ges-sync-url-input');
+  const tokenEl = document.getElementById('ges-sync-token-input');
+  if (urlEl) urlEl.value = syncUrl;
+  if (tokenEl) tokenEl.value = syncToken;
+  const statusEl = document.getElementById('ges-sync-status-text');
+  if (statusEl) statusEl.textContent = syncUrl ? 'conectado' : 'desconectado';
+
   const status = document.getElementById('ges-dados-status');
   if (status && gesLojasRaw.length > 0) {
     const periods = [...new Set(gesLojasRaw.map(r=>r.periodo).filter(Boolean))].sort();
     status.textContent = gesLojasRaw.length + ' registros · ' + gesLojasRaw.filter((v,i,a)=>a.findIndex(r=>r.nome===v.nome)===i).length + ' lojas · períodos: ' + periods.join(', ');
   }
+}
+
+// [NOVO] Funções de conexão para o Gestão (Vini)
+function connectGesSync() {
+  const url = document.getElementById('ges-sync-url-input').value.trim();
+  const token = document.getElementById('ges-sync-token-input').value.trim();
+  if (!url) { toast('Informe a URL', 'warning'); return; }
+  syncUrl = url;
+  syncToken = token;
+  localStorage.setItem(SYNC_URL_KEY, url);
+  localStorage.setItem(SYNC_TOKEN_KEY, token);
+  const statusEl = document.getElementById('ges-sync-status-text');
+  if (statusEl) statusEl.textContent = 'conectado';
+  toast('Conectado ✓', 'success');
+}
+
+async function testGesSync() {
+  const url = document.getElementById('ges-sync-url-input').value.trim() || syncUrl;
+  const token = document.getElementById('ges-sync-token-input').value.trim() || syncToken;
+  if (!url) { toast('Informe a URL primeiro', 'warning'); return; }
+  toast('Testando…', 'info');
+  try {
+    const res = await fetch(url + '?token=' + encodeURIComponent(token || URL_TOKEN), { method: 'GET', redirect: 'follow' });
+    const data = await res.json();
+    if (data.error) { toast('Erro: ' + data.error, 'danger'); }
+    else {
+      toast('Conexão OK — role: ' + data.role, 'success');
+      const statusEl = document.getElementById('ges-sync-status-text');
+      if (statusEl) statusEl.textContent = 'conectado · ' + data.role;
+    }
+  } catch(e) { toast('Falha: ' + e.message, 'danger'); }
+}
+
+function disconnectGesSync() {
+  if (!confirm('Desconectar da planilha?')) return;
+  syncUrl = ''; syncToken = '';
+  localStorage.removeItem(SYNC_URL_KEY);
+  localStorage.removeItem(SYNC_TOKEN_KEY);
+  const urlEl = document.getElementById('ges-sync-url-input');
+  const tokenEl = document.getElementById('ges-sync-token-input');
+  if (urlEl) urlEl.value = '';
+  if (tokenEl) tokenEl.value = '';
+  const statusEl = document.getElementById('ges-sync-status-text');
+  if (statusEl) statusEl.textContent = 'desconectado';
+  toast('Desconectado', 'warning');
 }
 
 function importGesData() {
@@ -1069,13 +1110,14 @@ function mergeGesData(newRows) {
   toast(newRows.length + ' linha(s) importadas com sucesso', 'success');
 }
 
+// [FIX] Usa syncToken em vez de URL_TOKEN para o Vini conseguir salvar
 async function saveGestaoToCloud(lojas) {
   if (!syncUrl) {
     toast('Planilha não configurada — dados salvos só localmente', 'warning');
     return;
   }
   try {
-    const payload = { token: URL_TOKEN, data: { gestao_lojas: lojas } };
+    const payload = { token: syncToken || URL_TOKEN, data: { gestao_lojas: lojas } };
     const res = await fetch(syncUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1107,7 +1149,7 @@ async function init(){
   setSyncStatus(syncUrl?'syncing':'online');
 
   const role=await load();
-  if(role===null)return; // access denied — para aqui
+  if(role===null)return;
 
   document.getElementById('current-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
   document.querySelectorAll('.section > table').forEach(tbl=>{const wrapper=document.createElement('div');wrapper.className='table-scroll';tbl.parentNode.insertBefore(wrapper,tbl);wrapper.appendChild(tbl);});
