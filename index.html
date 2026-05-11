@@ -435,9 +435,25 @@
   </section>
 
   <!-- GESTÃO: DADOS -->
-  <section class="view" id="view-ges-dados">
+ <section class="view" id="view-dados">
     <div class="data-grid">
       <div class="data-card" style="grid-column:1/-1;border-left:3px solid var(--eden-accent)">
+        <h3>Conexão com Google Sheets</h3>
+        <p>Cole a URL do Apps Script e o TOKEN_LUIS no campo token. Apenas Luis pode salvar dados.</p>
+        <div class="form-group"><label>URL do Web App (termina em /exec)</label><input type="text" id="sync-url-input" placeholder="https://script.google.com/macros/s/.../exec"></div>
+        <div class="form-group"><label>Token (TOKEN_LUIS)</label><input type="text" id="sync-token-input" placeholder="EDEN-COO-2026"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-primary btn-sm" onclick="connectSync()">Conectar</button><button class="btn btn-ghost btn-sm" onclick="testSync()">Testar conexão</button><button class="btn btn-danger btn-sm" onclick="disconnectSync()">Desconectar</button></div>
+        <div class="data-stat"><span class="label">Status</span><span class="value" id="sync-status-text">desconectado</span></div>
+        <div class="data-stat"><span class="label">Última sincronização</span><span class="value" id="sync-last-text">—</span></div>
+      </div>
+      <div class="data-card" id="token-links-card" style="grid-column:1/-1;border-left:3px solid var(--warning);display:none">
+        <h3>Links de acesso</h3>
+        <p>Envie o link correspondente para cada usuário. Sem o token correto, a página mostra acesso negado.</p>
+        <div style="margin-bottom:14px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em">Luis Eduardo — acesso completo</div><div class="token-box" id="link-luis">—</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em">Vinicius — apenas Éden Gestão</div><div class="token-box" id="link-vini">—</div></div>
+        <div style="margin-top:14px;padding:10px 12px;background:var(--bg-elev-2);border-radius:6px;font-size:11px;color:var(--text-muted)">Para trocar os tokens, edite TOKEN_LUIS e TOKEN_VINI no Apps Script e reimplante.</div>
+      </div>
+      <div class="data-card">
         <h3>Atualizar dados das lojas</h3>
         <p>Cole um JSON com os novos dados ou envie um arquivo CSV. Os dados são mesclados por loja + período — histórico não é apagado.</p>
         <textarea id="ges-import-text" style="min-height:120px" placeholder='{"gestao_lojas":[{"nome":"Kock &amp; Borges","bandeira":"Edificação","cidade":"S. J. Pinhais","uf":"PR","periodo":"2026-05","faturamento":720000,"cmv":0.63,"ticket":64.50,"clientes":11000}]}'></textarea>
