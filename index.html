@@ -1025,16 +1025,20 @@ function aprovBaseCompare(a,b){
 
 function sortAprovacoesQueue(items){
   const sorted = [...items].sort(aprovBaseCompare);
+
   const accounts = [];
   const seen = new Set();
   const edges = new Map();
-  const dests = new Set();
+  const indegree = new Map();
 
   const addAccount = key => {
-    if (key && !seen.has(key)) {
+    if (!key) return;
+    if (!seen.has(key)) {
       seen.add(key);
       accounts.push(key);
     }
+    if (!edges.has(key)) edges.set(key, []);
+    if (!indegree.has(key)) indegree.set(key, 0);
   };
 
   sorted.forEach(item => {
@@ -1045,28 +1049,30 @@ function sortAprovacoesQueue(items){
       const dst = aprovDestinoKey(item);
       if (dst) {
         addAccount(dst);
-        dests.add(dst);
-        if (!edges.has(src)) edges.set(src, []);
-        if (!edges.get(src).includes(dst)) edges.get(src).push(dst);
+        if (!edges.get(src).includes(dst)) {
+          edges.get(src).push(dst);
+          indegree.set(dst, (indegree.get(dst) || 0) + 1);
+        }
       }
     }
   });
 
   const ordered = [];
-  const visiting = new Set();
-  const visited = new Set();
+  const queue = accounts.filter(key => (indegree.get(key) || 0) === 0);
 
-  const visit = key => {
-    if (!key || visited.has(key) || visiting.has(key)) return;
-    visiting.add(key);
+  while (queue.length) {
+    const key = queue.shift();
     ordered.push(key);
-    (edges.get(key) || []).forEach(visit);
-    visiting.delete(key);
-    visited.add(key);
-  };
 
-  accounts.filter(k => edges.has(k) && !dests.has(k)).forEach(visit);
-  accounts.forEach(visit);
+    (edges.get(key) || []).forEach(dst => {
+      indegree.set(dst, (indegree.get(dst) || 0) - 1);
+      if ((indegree.get(dst) || 0) === 0) queue.push(dst);
+    });
+  }
+
+  accounts.forEach(key => {
+    if (!ordered.includes(key)) ordered.push(key);
+  });
 
   const idxFor = key => {
     const idx = ordered.indexOf(key);
