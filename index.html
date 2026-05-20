@@ -747,7 +747,7 @@ function setSyncStatus(status){
   if(syncUrl&&lastSyncAt){const t=document.getElementById('sync-last-text');if(t)t.textContent=lastSyncAt.toLocaleString('pt-BR');}
 }
 
-function normalizeItem(item){const out={...item};if(out.valor!==undefined&&out.valor!==null&&out.valor!==''){if(typeof out.valor==='string'){out.valor=parseFloat(out.valor.replace(/[R$\s.]/g,'').replace(',','.'))||0;}else{out.valor=parseFloat(out.valor)||0;}}else{out.valor=0;}if(out.transitoria!==undefined){const v=out.transitoria;if(typeof v==='boolean')out.transitoria=v;else if(typeof v==='string'){const s=v.trim().toLowerCase();out.transitoria=(s==='true'||s==='sim'||s==='1'||s==='verdadeiro');}else if(typeof v==='number')out.transitoria=v===1;else out.transitoria=false;}if(out.vinculo===''||out.vinculo===null)delete out.vinculo;if(typeof out.vinculo==='string')out.vinculo=out.vinculo.trim()||undefined;['id','cliente','unidade','status','descricao','categoria','solicitante','titulo','tipo','data','vencimento','decisao','data_pagamento'].forEach(f=>{if(typeof out[f]==='string')out[f]=out[f].trim();});if(out.data_pagamento===''||out.data_pagamento===null)delete out.data_pagamento;return out;}
+function normalizeItem(item){const out={...item};if(out.valor!==undefined&&out.valor!==null&&out.valor!==''){if(typeof out.valor==='string'){out.valor=parseFloat(out.valor.replace(/[R$\s.]/g,'').replace(',','.'))||0;}else{out.valor=parseFloat(out.valor)||0;}}else{out.valor=0;}if(out.transitoria!==undefined){const v=out.transitoria;if(typeof v==='boolean')out.transitoria=v;else if(typeof v==='string'){const s=v.trim().toLowerCase();out.transitoria=(s==='true'||s==='sim'||s==='1'||s==='verdadeiro');}else if(typeof v==='number')out.transitoria=v===1;else out.transitoria=false;}if(out.vinculo===''||out.vinculo===null)delete out.vinculo;if(typeof out.vinculo==='string')out.vinculo=out.vinculo.trim()||undefined;['id','cliente','unidade','status','descricao','categoria','solicitante','destino','titulo','tipo','data','vencimento','decisao','data_pagamento'].forEach(f=>{if(typeof out[f]==='string')out[f]=out[f].trim();});if(out.data_pagamento===''||out.data_pagamento===null)delete out.data_pagamento;return out;}
 
 async function loadFromCloud(){
   if(!syncUrl||pendingCloudSave)return false;
@@ -1003,12 +1003,96 @@ function importFromText(){const txt=document.getElementById('import-text').value
 function mergeImport(data){if(!data||typeof data!=='object'){toast('Estrutura inválida','danger');return;}let added=0,updated=0;['inadimplencia','caixa','aprovacoes','historico'].forEach(k=>{if(!Array.isArray(data[k]))return;if(!state[k])state[k]=[];data[k].forEach(item=>{const idx=state[k].findIndex(x=>x.id===item.id);if(idx>=0){state[k][idx]=item;updated++;}else{state[k].push(item);added++;}});});save();toast(`Importado: ${added} novos, ${updated} atualizados`);renderAll();}
 function loadSampleData(){if(!confirm('Substituir pelos dados de exemplo?'))return;state=JSON.parse(JSON.stringify(SAMPLE));save();toast('Dados de exemplo carregados');renderAll();}
 function clearAllData(){if(!confirm('Apagar TODOS os dados? Não pode ser desfeito.'))return;state={inadimplencia:[],caixa:[],aprovacoes:[],historico:[]};save();toast('Todos os dados foram apagados','warning');renderAll();}
+  function normConta(v){
+  return String(v || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+}
+
+function aprovContaKey(a){
+  return normConta(a.solicitante || 'Sem conta');
+}
+
+function aprovDestinoKey(a){
+  return normConta(a.destino || a.conta_destino || '');
+}
+
+function isAprovTransfer(a){
+  return a.transitoria && a.valor > 0;
+}
+
+function aprovBaseCompare(a,b){
+  return String(a.data || '').localeCompare(String(b.data || '')) || String(a.id || '').localeCompare(String(b.id || ''));
+}
+
+function sortAprovacoesQueue(items){
+  const sorted = [...items].sort(aprovBaseCompare);
+  const accounts = [];
+  const seen = new Set();
+  const edges = new Map();
+  const dests = new Set();
+
+  const addAccount = key => {
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      accounts.push(key);
+    }
+  };
+
+  sorted.forEach(item => {
+    const src = aprovContaKey(item);
+    addAccount(src);
+
+    if (isAprovTransfer(item)) {
+      const dst = aprovDestinoKey(item);
+      if (dst) {
+        addAccount(dst);
+        dests.add(dst);
+        if (!edges.has(src)) edges.set(src, []);
+        if (!edges.get(src).includes(dst)) edges.get(src).push(dst);
+      }
+    }
+  });
+
+  const ordered = [];
+  const visiting = new Set();
+  const visited = new Set();
+
+  const visit = key => {
+    if (!key || visited.has(key) || visiting.has(key)) return;
+    visiting.add(key);
+    ordered.push(key);
+    (edges.get(key) || []).forEach(visit);
+    visiting.delete(key);
+    visited.add(key);
+  };
+
+  accounts.filter(k => edges.has(k) && !dests.has(k)).forEach(visit);
+  accounts.forEach(visit);
+
+  const idxFor = key => {
+    const idx = ordered.indexOf(key);
+    return idx === -1 ? 9999 : idx;
+  };
+
+  return [...items].sort((a,b) => {
+    const ai = idxFor(aprovContaKey(a));
+    const bi = idxFor(aprovContaKey(b));
+    if (ai !== bi) return ai - bi;
+
+    const at = isAprovTransfer(a) ? 2 : 1;
+    const bt = isAprovTransfer(b) ? 2 : 1;
+    if (at !== bt) return at - bt;
+
+    return aprovBaseCompare(a,b);
+  });
+}
 function renderAprovacoes(){
   const pendentes=state.aprovacoes.filter(a=>a.status==='pendente');
   const visiveis=pendentes.filter(a=>!(a.transitoria&&a.valor<0));
-  visiveis.sort((a,b)=>{const gk=i=>i.transitoria&&i.valor>0?`A_${i.id}`:i.vinculo?`A_${i.vinculo}_Z`:`B_${i.id}`;return gk(a).localeCompare(gk(b));});
-  const list=document.getElementById('aprovacoes-list');
-  list.innerHTML=visiveis.length===0?'<div class="empty-state"><h4>Nenhum pagamento pendente</h4><p>Mesa limpa.</p></div>':visiveis.map((a,i)=>renderApprovalCard(a,pendentes,i+1)).join('');
+  const ordenados = sortAprovacoesQueue(visiveis);
+const list = document.getElementById('aprovacoes-list');
+list.innerHTML = ordenados.length === 0
+  ? '<div class="empty-state"><h4>Nenhum pagamento pendente</h4><p>Mesa limpa.</p></div>'
+  : ordenados.map((a, i) => renderApprovalCard(a, pendentes, i + 1)).join('');
   const hist=state.historico.slice().reverse();
   const tbody=document.getElementById('historico-tbody');
   tbody.innerHTML=hist.length===0?'<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">Nenhum histórico.</td></tr>':hist.slice(0,10).map(h=>`<tr><td class="cell-bold">${h.titulo}</td><td class="cell-muted">${h.solicitante}</td><td><span class="badge ${h.decisao==='aprovado'?'badge-success':'badge-danger'}">${h.decisao}</span></td><td class="cell-muted">${fmtDate(h.data)}</td><td class="num">${fmtBR(h.valor)}</td></tr>`).join('');
